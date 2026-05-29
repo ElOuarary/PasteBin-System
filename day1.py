@@ -1,7 +1,10 @@
 from flask import Flask, request, url_for
 from markupsafe import escape
-# The instance of the Flask class will create our WSGI app 
+
+ 
 """
+- The instance of the Flask class will create our WSGI app
+- Any configuration and URLs will be registred within this class
 - We provided the application's module or package name, used to let flaks knows where to look for
 resources (static file, templates...)
 - The decorator route is used bind the app's URL to the function it want to trigger

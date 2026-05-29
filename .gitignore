@@ -8,3 +8,12 @@ wheels/
 
 # Virtual environments
 .venv
+
+instance/
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+build/
+*.egg-info/
