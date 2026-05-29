@@ -78,10 +78,10 @@ def logout():
     session.clear()
     return redirect(url_for("index"))
 
-def login_required(view):
-    @functools.wraps
-    def wrapped_views(**kwargs):
-        if g.user is None:
-            redirect(url_for("auth.login"))
-        return view(**kwargs)
-    return wrapped_views
+# def login_required(view):
+#     @functools.wraps
+#     def wrapped_views(**kwargs):
+#         if g.user is None:
+#             redirect(url_for("auth.login"))
+#         return view(**kwargs)
+#     return wrapped_views
