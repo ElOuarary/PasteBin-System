@@ -51,11 +51,11 @@ def register():
 def login():
     if request.method == "POST":
         username = request.form.get("username", "")
-        password = request.form.get("passowrd", "")
+        password = request.form.get("password", "")
         db = get_db()
         error = None
         user = db.execute(
-            "SELECT * FROM user WHERE user = ?", (username,)
+            "SELECT * FROM user WHERE username = ?", (username,)
         ).fetchone()
         
         
