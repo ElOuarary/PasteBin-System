@@ -18,7 +18,7 @@ def load_logged_in_user():
             "SELECT * FROM user WHERE id = ?", (user_id,)
         ).fetchone()
 
-@bp.route("/register", methods=("GET", "POST"))
+@bp.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
         username = request.form.get("username", "")
@@ -47,7 +47,7 @@ def register():
     
     return render_template("auth/register.html")
 
-@bp.route("/login", methods=("GET", "POST"))
+@bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         username = request.form.get("username", "")
@@ -59,14 +59,14 @@ def login():
         ).fetchone()
         
         
-        if not user:
+        if user is None:
             error = "Incorrect username"
         elif not check_password_hash(user["password"], password):
             error = "Incorrect password"
             
         if error is None:
             session.clear()
-            session["use_id"] = user["id"]
+            session["user_id"] = user["id"]
             return redirect(url_for("index"))
         
         flash(error)
@@ -78,10 +78,10 @@ def logout():
     session.clear()
     return redirect(url_for("index"))
 
-# def login_required(view):
-#     @functools.wraps
-#     def wrapped_views(**kwargs):
-#         if g.user is None:
-#             redirect(url_for("auth.login"))
-#         return view(**kwargs)
-#     return wrapped_views
+def login_required(view):
+    @functools.wraps(view)
+    def wrapped_views(**kwargs):
+        if g.user is None:
+            redirect(url_for("auth.login"))
+        return view(**kwargs)
+    return wrapped_views

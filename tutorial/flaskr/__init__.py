@@ -1,10 +1,11 @@
 import os
-from flask import Flask
+
+from flask import Flask, current_app
 
 def create_app(test_config=None):
     """
     The application factory function, any configuration, registration and other setup
-    for the application needs will happen inside the function and it will returns he function
+    for the application needs will happen inside the function and it will returns the app
     """
     # Create and cofigure the app
     app = Flask(__name__, instance_relative_config=True)

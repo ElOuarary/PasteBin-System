@@ -10,7 +10,7 @@ def get_db():
     
     # current_app is another special object that points to the Flask application handling the request
     # get_db will be called when the application has been created and is handling a request
-    if "db" in g:
+    if "db" not in g:
         g.db = sqlite3.connect(
             current_app.config["DATABASE"],
             detect_types=sqlite3.PARSE_DECLTYPES
