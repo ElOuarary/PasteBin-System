@@ -7,9 +7,9 @@ app = FastAPI()
 
 memory = {}
 
-@app.get("/", status_code=status.HTTP_201_CREATED)
+@app.get("/health", status_code=status.HTTP_200_OK)
 def root():
-    return {"Hello": "World"}
+    return {"Status": "Healthy"}
 
 @app.post("/pastebin", status_code=status.HTTP_201_CREATED)
 def write_pin(
@@ -18,9 +18,9 @@ def write_pin(
     accept: Annotated[str | None, Header()] = None
     ):
     if content_type is None or content_type.lower() != "application/json":
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, datail="application/json is only the supproted content_type")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="application/json is only the supproted content_type")
     if accept is None or accept.lower() != "application/json":
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, datail="application/json is only the supproted accept")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="application/json is only the supproted accept")
     if text is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please Provide the body parameter text")
     try:
@@ -30,7 +30,7 @@ def write_pin(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     return {"paste_id": paste_id, "content": text}
 
-@app.get("/pastebin/{paste_id}")
+@app.get("/pastebin/{paste_id}", status_code=status.HTTP_200_OK)
 def read_pin(paste_id: str):
     if paste_id not in memory.keys():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paste ID not found")
@@ -44,9 +44,11 @@ def update_bin(
     accept: Annotated[str | None, Header()] = None
     ):
     if content_type is None or content_type.lower() != "application/json":
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, datail="application/json is only the supproted content_type")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="application/json is only the supproted content_type")
     if accept is None or accept.lower() != "application/json":
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, datail="application/json is only the supproted accept")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="application/json is only the supproted accept")
+    if paste_id not in memory.keys():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paste ID not found")
     memory[paste_id] = text
     return
 
