@@ -1,9 +1,32 @@
 from fastapi import FastAPI, Body, Header, HTTPException, status
+from sqlmodel import Field, Session, SQLModel, create_engine, select
 
 from typing import Annotated
 import uuid
 
 MAX_CHARACTER_ALLOWED = 10_000_000
+
+class User(SQLModel, table=True):
+    id: int | None = Field(primary_key=True)
+    name: str = Field(index=True)
+    email: str = Field()
+    created_at: str = Field()
+    
+class Paste(SQLModel, table=True):
+    id: int | None = Field(primary_key=True)
+    content: str = Field()
+    created_at: str = Field()
+    expires_at: str = Field()
+    view_count: int = Field()
+    is_private: bool = Field()
+    
+class Tag(SQLModel, table=True):
+    id: int | None = Field(primary_key=True)
+    tag: str = Field()
+    
+class Paste_Tag(SQLModel, table=True):
+    paste_id: int  = Field()
+    tag: int = Field(index=True)
 
 app = FastAPI()
 
