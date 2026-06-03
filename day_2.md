@@ -8,3 +8,10 @@ value True
 
 Using the Field class for the SQLModel frameworks help defining constraints
 on the attributes of the object model representing the table
+
+To Establish a connection to the database use the engine, investigate
+the possible configuration that you can set for the connection
+
+Each request need to have its own session so that request would not
+access others
+
