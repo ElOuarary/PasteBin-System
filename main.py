@@ -1,11 +1,11 @@
 from fastapi import Depends, FastAPI, Header, HTTPException, status
-from sqlmodel import Field, Session, SQLModel, create_engine
+from sqlmodel import Session
 
 from src.config.database import init_db, get_session
 from src.models import Paste
 from src.schemas.paste import PasteCreate, PasteRead, PasteUpdate
 
-from src.crud import create_paste, get_paste, update_paste, delete_paste
+from src.crud import PasteExpiredException, create_paste, get_paste, update_paste, delete_paste, _is_expired
 
 from typing import Annotated
 
@@ -42,11 +42,13 @@ def read_pin(
     ):
     if accept is not None and accept.lower() != "application/json":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error" : "application/json is only the supproted Accept"})
-    
-    paste = get_paste(session, paste_id)
-    if not paste:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"})
-    return paste
+    try:
+        paste = get_paste(session, paste_id)
+        if paste is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"})
+        return paste
+    except PasteExpiredException as e:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail={"error": "content no longer available"})
 
 @app.put("/pastebin/{paste_id}", response_model=PasteRead, status_code=status.HTTP_202_ACCEPTED)
 def update_bin(
@@ -58,13 +60,15 @@ def update_bin(
     if accept is not None and accept.lower() != "application/json":
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"error": "application/json is only the supproted accept"})
     paste_db = session.get(Paste, paste_id)
-    if not paste_db:
+    if paste_db is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"})
+    elif paste_in.expires_at is None and paste_db.expires_at is not None and _is_expired(paste_db.expires_at):
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail={"error": "content no longer available"})
     return update_paste(session, paste_db, paste_in)
 
 @app.delete("/pastebin/{paste_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_bin(paste_id: str, session: SessionDep):
     paste_db = session.get(Paste, paste_id)
-    if not paste_db:
+    if paste_db is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"})
     delete_paste(session, paste_db)
