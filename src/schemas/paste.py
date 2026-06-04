@@ -12,7 +12,7 @@ class PasteRead(SQLModel):
     id: int
     content: str
     created_at: datetime
-    expires_at: datetime
+    expires_at: Optional[datetime]
     view_count: int
     is_private: bool  
     

@@ -1,6 +1,6 @@
 from sqlmodel import Session
-from models import Paste
-from schemas.paste import PasteCreate, PasteUpdate
+from .models import Paste
+from .schemas.paste import PasteCreate, PasteUpdate
 
 def create_paste(session: Session, paste_in: PasteCreate) -> Paste:
     paste = Paste.model_validate(paste_in)
