@@ -161,7 +161,7 @@ done
 SIZE_BEFORE=$(get_db_size)
 echo "Database size before cleanup: $SIZE_BEFORE bytes"
 
-run_test "Delete Expired Pastes (DELETE /pastebin/expired)" 204 "curl -X DELETE $BASE_URL/pastebin/expired"
+run_test "Delete Expired Pastes (DELETE /pastes/expired)" 204 "curl -X DELETE $BASE_URL/pastes/expired"
 
 SIZE_AFTER=$(get_db_size)
 echo "Database size after cleanup: $SIZE_AFTER bytes"

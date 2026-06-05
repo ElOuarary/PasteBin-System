@@ -108,4 +108,5 @@ def delete_paste(session: Session, paste_db: Paste) -> None:
 
 def delete_expired(session: Session) -> None:
     session.exec(delete(Paste).where(Paste.expires_at < datetime.now(timezone.utc)))
+    session.commit()
     return

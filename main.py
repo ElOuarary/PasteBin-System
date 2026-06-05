@@ -91,6 +91,6 @@ def delete_bin(paste_id: int, session: SessionDep):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"})
     delete_paste(session, paste_db)
     
-@app.delete("/pastebin/expired", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/pastes/expired", status_code=status.HTTP_204_NO_CONTENT)
 def delete_expired_bin(session: SessionDep):
     delete_expired(session)
