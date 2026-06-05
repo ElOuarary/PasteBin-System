@@ -44,6 +44,10 @@ run_test() {
     fi
 }
 
+get_db_size() {
+    docker exec postgres-dev psql -U developer -d dev_db -t -A -c "SELECT pg_database_size('dev_db');"
+}
+
 echo "Starting API Automated Tests..."
 echo "====================================================="
 
@@ -84,6 +88,44 @@ echo "-----------------------------------------------------"
 echo "Sequential Happy Path Tests Completed."
 echo "-----------------------------------------------------"
 
+# --- QUERY PARAMETER TESTS ---
+
+echo "Testing Query Parameters..."
+# Create a paste specifically for query param testing
+QUERY_TAG="query-tag"
+QUERY_BODY="{\"content\": \"Query param test paste\", \"tag\": \"$QUERY_TAG\"}"
+QUERY_RESP=$(curl -s -H "Content-Type: application/json" -H "Accept: application/json" -d "$QUERY_BODY" "$BASE_URL/pastebin")
+QUERY_PASTE_ID=$(echo "$QUERY_RESP" | grep -oP '"(id|paste_id)":\s*[^,}]+' | head -1 | cut -d':' -f2 | tr -d ' "')
+
+if [ -n "$QUERY_PASTE_ID" ]; then
+    # Test filter by paste_id
+    run_test "Filter by ID (GET /pastebin?paste_id=$QUERY_PASTE_ID)" 200 "curl -H \"Accept: application/json\" \"$BASE_URL/pastebin?paste_id=$QUERY_PASTE_ID\""
+
+    # Test filter by tag
+    run_test "Filter by Tag (GET /pastebin?tag=$QUERY_TAG)" 200 "curl -H \"Accept: application/json\" \"$BASE_URL/pastebin?tag=$QUERY_TAG\""
+
+    # Test filter by ID and Tag
+    run_test "Filter by ID and Tag (GET /pastebin?paste_id=$QUERY_PASTE_ID&tag=$QUERY_TAG)" 200 "curl -H \"Accept: application/json\" \"$BASE_URL/pastebin?paste_id=$QUERY_PASTE_ID&tag=$QUERY_TAG\""
+
+    # Test filter by user (should be 404 since we don't have users assigned)
+    run_test "Filter by User (GET /pastebin?user=nonexistent)" 404 "curl -H \"Accept: application/json\" \"$BASE_URL/pastebin?user=nonexistent\""
+
+    # Test Wrong Accept header for query params
+    run_test "Query Filter - Wrong Accept (400)" 400 "curl -H \"Accept: text/html\" \"$BASE_URL/pastebin?tag=$QUERY_TAG\""
+
+    # Test with no parameters (Should return 404 or 200 null depending on implementation,
+    # based on the current CRUD it returns None, which FastAPI might treat as 404 or 500
+    # if response_model is PasteRead. Let's test if it's a failure)
+    run_test "Query Filter - No Params" 404 "curl -H \"Accept: application/json\" $BASE_URL/pastebin"
+
+    # Cleanup
+    curl -s -X DELETE $BASE_URL/pastebin/$QUERY_PASTE_ID > /dev/null
+else
+    echo "CRITICAL: Failed to create paste for query param testing."
+fi
+
+echo "-----------------------------------------------------"
+
 # --- EXPIRED CONTENT TESTS ---
 
 echo "Testing Expired Content..."
@@ -102,6 +144,32 @@ if [ -n "$EXP_PASTE_ID" ]; then
     curl -s -X DELETE $BASE_URL/pastebin/$EXP_PASTE_ID > /dev/null
 else
     echo "CRITICAL: Failed to create expired paste for testing."
+fi
+
+echo "-----------------------------------------------------"
+
+# --- DATABASE CLEANUP TESTS ---
+
+echo "Testing Database Cleanup..."
+# Setup: Create several expired pastes
+for i in {1..10}; do
+    curl -s -H "Content-Type: application/json" -H "Accept: application/json" \
+    -d "{\"content\": \"Expired test $i\", \"expires_at\": \"2000-01-01T00:00:00Z\"}" \
+    $BASE_URL/pastebin > /dev/null
+done
+
+SIZE_BEFORE=$(get_db_size)
+echo "Database size before cleanup: $SIZE_BEFORE bytes"
+
+run_test "Delete Expired Pastes (DELETE /pastebin/expired)" 204 "curl -X DELETE $BASE_URL/pastebin/expired"
+
+SIZE_AFTER=$(get_db_size)
+echo "Database size after cleanup: $SIZE_AFTER bytes"
+
+if [ "$SIZE_AFTER" -le "$SIZE_BEFORE" ]; then
+    echo "DB Size Result: Success (Size did not increase, potentially decreased)"
+else
+    echo "DB Size Result: Unexpected (Size increased after deletion)"
 fi
 
 echo "-----------------------------------------------------"

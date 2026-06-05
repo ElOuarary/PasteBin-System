@@ -12,11 +12,13 @@ class PasteCreate(SQLModel):
 class PasteRead(SQLModel):
     id: int
     content: str
+    user: Optional[str] = None
     created_at: datetime
-    expires_at: Optional[datetime]
+    expires_at: Optional[datetime] = None
     view_count: int
     is_private: bool  
     tag: Optional[str] = None
+    
 class PasteUpdate(SQLModel):
     expires_at: Optional[datetime] = None
     is_private: Optional[bool] = None

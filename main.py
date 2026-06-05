@@ -1,11 +1,11 @@
 from fastapi import Depends, FastAPI, Header, HTTPException, status
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from src.config.database import init_db, get_session
-from src.models import Paste, User, Tag
+from src.models import Paste
 from src.schemas.paste import PasteCreate, PasteRead, PasteUpdate
 
-from src.crud import PasteExpiredException, create_paste, get_paste, update_paste, delete_paste, _is_expired
+from src.crud import PasteExpiredException, create_paste, get_paste, update_paste, delete_paste, delete_expired, _is_expired
 
 from typing import Annotated, Optional
 
@@ -50,7 +50,7 @@ def read_pin(
     except PasteExpiredException as e:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail={"error": "content no longer available"})
 
-@app.get("/pastebin", response_model=PasteRead, status_code=status.HTTP_201_CREATED)
+@app.get("/pastebin", response_model=PasteRead, status_code=status.HTTP_200_OK)
 def read_pin_filtred(
     session: SessionDep,
     paste_id: Optional[int] = None,
@@ -60,9 +60,13 @@ def read_pin_filtred(
 ):
     if accept is not None and accept.lower() != "application/json":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error" : "application/json is only the supproted Accept"})
-    if paste_id is None or user is None or tag is None:
-        raise None
-    return get_paste(session, paste_id, user, tag)
+    try:
+        paste = get_paste(session, paste_id, user, tag)
+        if paste is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"})
+        return paste
+    except PasteExpiredException as e:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail={"error": "content no longer available"})
 
 @app.put("/pastebin/{paste_id}", response_model=PasteRead, status_code=status.HTTP_202_ACCEPTED)
 def update_bin(
@@ -86,3 +90,7 @@ def delete_bin(paste_id: int, session: SessionDep):
     if paste_db is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"})
     delete_paste(session, paste_db)
+    
+@app.delete("/pastebin/expired", status_code=status.HTTP_204_NO_CONTENT)
+def delete_expired_bin(session: SessionDep):
+    delete_expired(session)

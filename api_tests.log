@@ -1,33 +1,48 @@
 Starting API Automated Tests...
 =====================================================
-Testing Health Check (GET /health)... PASSED (HTTP 200, Time: 0.020769s)
+Testing Health Check (GET /health)... PASSED (HTTP 200, Time: 0.006968s)
 Creating paste...
-Paste created with ID: 1
-Testing Read Paste (GET /pastebin/1)... PASSED (HTTP 200, Time: 0.013653s)
-Testing Update Paste (PUT /pastebin/1)... PASSED (HTTP 202, Time: 0.025833s)
-Testing Verify Update (GET /pastebin/1)... PASSED (HTTP 200, Time: 0.007202s)
-Testing Delete Paste (DELETE /pastebin/1)... PASSED (HTTP 204, Time: 0.008764s)
-Testing Verify Deletion (GET /pastebin/1)... PASSED (HTTP 404, Time: 0.004290s)
+Paste created with ID: 100138
+Testing Read Paste (GET /pastebin/100138)... PASSED (HTTP 200, Time: 0.010298s)
+Testing Update Paste (PUT /pastebin/100138)... PASSED (HTTP 202, Time: 0.010222s)
+Testing Verify Update (GET /pastebin/100138)... PASSED (HTTP 200, Time: 0.009088s)
+Testing Delete Paste (DELETE /pastebin/100138)... PASSED (HTTP 204, Time: 0.005717s)
+Testing Verify Deletion (GET /pastebin/100138)... PASSED (HTTP 404, Time: 0.004151s)
 -----------------------------------------------------
 Sequential Happy Path Tests Completed.
 -----------------------------------------------------
-Testing Expired Content...
-CRITICAL: Failed to create expired paste for testing.
+Testing Query Parameters...
+Testing Filter by ID (GET /pastebin?paste_id=100139)... PASSED (HTTP 200, Time: 0.009854s)
+Testing Filter by Tag (GET /pastebin?tag=query-tag)... PASSED (HTTP 200, Time: 0.025159s)
+Testing Filter by ID and Tag (GET /pastebin?paste_id=100139&tag=query-tag)... PASSED (HTTP 200, Time: 0.017589s)
+Testing Filter by User (GET /pastebin?user=nonexistent)... PASSED (HTTP 404, Time: 0.010352s)
+Testing Query Filter - Wrong Accept (400)... PASSED (HTTP 400, Time: 0.001904s)
+Testing Query Filter - No Params... PASSED (HTTP 404, Time: 0.003838s)
 -----------------------------------------------------
-Testing POST - Missing Content-Type (422)... PASSED (HTTP 422, Time: 0.002066s)
-Testing POST - Wrong Content-Type (422)... PASSED (HTTP 422, Time: 0.003499s)
-Testing POST - Wrong Accept (400)... PASSED (HTTP 400, Time: 0.002872s)
-Testing POST - Missing/Null Content (422)... PASSED (HTTP 422, Time: 0.003302s)
-Testing GET - Wrong Accept (400)... PASSED (HTTP 400, Time: 0.002848s)
-Testing GET - Invalid ID (Non-numeric 422)... PASSED (HTTP 422, Time: 0.003330s)
-Testing GET - Not Found (404)... PASSED (HTTP 404, Time: 0.006553s)
-Testing PUT - Missing Content-Type (422)... PASSED (HTTP 422, Time: 0.002013s)
-Testing PUT - Missing/Wrong Accept (400)... PASSED (HTTP 400, Time: 0.002697s)
-Testing PUT - Invalid ID (Non-numeric 422)... PASSED (HTTP 422, Time: 0.002377s)
-Testing PUT - Not Found (404)... PASSED (HTTP 404, Time: 0.003794s)
-Testing DELETE - Invalid ID (Non-numeric 422)... PASSED (HTTP 422, Time: 0.001837s)
-Testing DELETE - Not Found (404)... PASSED (HTTP 404, Time: 0.005049s)
+Testing Expired Content...
+Testing Read Expired Paste (GET /pastebin/100140)... PASSED (HTTP 410, Time: 0.006302s)
+Testing Update Expired Paste (PUT /pastebin/100140)... PASSED (HTTP 410, Time: 0.005135s)
+-----------------------------------------------------
+Testing Database Cleanup...
+Database size before cleanup: 30906035 bytes
+Testing Delete Expired Pastes (DELETE /pastebin/expired)... FAILED (Expected 204, got 422, Time: 0.001985s)
+Database size after cleanup: 30906035 bytes
+DB Size Result: Success (Size did not increase, potentially decreased)
+-----------------------------------------------------
+Testing POST - Missing Content-Type (422)... PASSED (HTTP 422, Time: 0.002348s)
+Testing POST - Wrong Content-Type (422)... PASSED (HTTP 422, Time: 0.006562s)
+Testing POST - Wrong Accept (400)... PASSED (HTTP 400, Time: 0.002608s)
+Testing POST - Missing/Null Content (422)... PASSED (HTTP 422, Time: 0.003629s)
+Testing GET - Wrong Accept (400)... PASSED (HTTP 400, Time: 0.005199s)
+Testing GET - Invalid ID (Non-numeric 422)... PASSED (HTTP 422, Time: 0.004990s)
+Testing GET - Not Found (404)... PASSED (HTTP 404, Time: 0.004693s)
+Testing PUT - Missing Content-Type (422)... PASSED (HTTP 422, Time: 0.001744s)
+Testing PUT - Missing/Wrong Accept (400)... PASSED (HTTP 400, Time: 0.006897s)
+Testing PUT - Invalid ID (Non-numeric 422)... PASSED (HTTP 422, Time: 0.003115s)
+Testing PUT - Not Found (404)... PASSED (HTTP 404, Time: 0.003629s)
+Testing DELETE - Invalid ID (Non-numeric 422)... PASSED (HTTP 422, Time: 0.001998s)
+Testing DELETE - Not Found (404)... PASSED (HTTP 404, Time: 0.004172s)
 =====================================================
-Tests Summary: 19 / 19 passed
+Tests Summary: 27 / 28 passed
 =====================================================
 All Tests Completed.

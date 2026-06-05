@@ -1,4 +1,4 @@
-from sqlmodel import Session, select
+from sqlmodel import Session, select, delete
 from .models import Paste, User, Tag
 from .schemas.paste import PasteCreate, PasteRead, PasteUpdate
 
@@ -12,6 +12,7 @@ def _is_expired(expires_at: datetime) -> bool:
 
 def create_paste(session: Session, paste_in: PasteCreate) -> PasteRead:
     paste = Paste.model_validate(paste_in)
+    tag = None
     if paste_in.tag is not None:
         statement = select(Tag).where(Tag.name == paste_in.tag)
         tag = session.exec(statement).first()
@@ -25,7 +26,7 @@ def create_paste(session: Session, paste_in: PasteCreate) -> PasteRead:
     session.commit()
     session.refresh(paste)
     paste_read = PasteRead.model_validate(paste)
-    if tag is not None:paste_read.tag = tag.name
+    if tag is not None: paste_read.tag = tag.name
     return paste_read
 
 def _get_paste(session: Session, paste_id: Optional[int] = None, user: Optional[str] = None, tag: Optional[str] = None) -> Paste | None:
@@ -37,13 +38,13 @@ def _get_paste(session: Session, paste_id: Optional[int] = None, user: Optional[
         
     if paste_id is not None:
         if user_model is not None  and tag_model is not None:
-            return session.exec(select(Paste).where(Paste.id == id).where(Paste.user_id == user_model.id).where(Paste.tag_id == tag_model.id)).first()
+            return session.exec(select(Paste).where(Paste.id == paste_id).where(Paste.user_id == user_model.id).where(Paste.tag_id == tag_model.id)).first()
         elif user_model is not None:
-            return session.exec(select(Paste).where(Paste.id == id).where(Paste.user_id == user_model.id)).first()
+            return session.exec(select(Paste).where(Paste.id == paste_id).where(Paste.user_id == user_model.id)).first()
         elif tag_model is not None:
-            session.exec(select(Paste).where(Paste.id == id).where(Paste.tag_id == tag_model.id)).first()
+            return session.exec(select(Paste).where(Paste.id == paste_id).where(Paste.tag_id == tag_model.id)).first()
         else:
-            session.get(Paste, paste_id)
+            return session.get(Paste, paste_id)
     else:
         if user_model is not None  and tag_model is not None:
             return session.exec(select(Paste).where(Paste.user_id == user_model.id).where(Paste.tag_id == tag_model.id)).first()
@@ -64,7 +65,7 @@ def get_paste(session: Session, paste_id: Optional[int] = None, user: Optional[s
         
         paste_read = PasteRead.model_validate(paste)
         if paste.user_id is not None:
-            user = session.exec(select(Tag).where(User.id == paste.user_id)).first()
+            user = session.exec(select(User).where(User.id == paste.user_id)).first()
             if user is not None:
                 paste_read.user = user.name
         if paste.tag_id is not None:
@@ -103,4 +104,8 @@ def update_paste(session: Session, paste_db: Paste, paste_in: PasteUpdate) -> Pa
 def delete_paste(session: Session, paste_db: Paste) -> None:
     session.delete(paste_db)
     session.commit()
+    return
+
+def delete_expired(session: Session) -> None:
+    session.exec(delete(Paste).where(Paste.expires_at < datetime.now(timezone.utc)))
     return
