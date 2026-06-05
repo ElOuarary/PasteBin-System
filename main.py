@@ -1,13 +1,13 @@
 from fastapi import Depends, FastAPI, Header, HTTPException, status
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from src.config.database import init_db, get_session
-from src.models import Paste
+from src.models import Paste, User, Tag
 from src.schemas.paste import PasteCreate, PasteRead, PasteUpdate
 
 from src.crud import PasteExpiredException, create_paste, get_paste, update_paste, delete_paste, _is_expired
 
-from typing import Annotated
+from typing import Annotated, Optional
 
 from contextlib import asynccontextmanager
 
@@ -50,6 +50,20 @@ def read_pin(
     except PasteExpiredException as e:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail={"error": "content no longer available"})
 
+@app.get("/pastebin", response_model=PasteRead, status_code=status.HTTP_201_CREATED)
+def read_pin_filtred(
+    session: SessionDep,
+    paste_id: Optional[int] = None,
+    user: Optional[str] = None,
+    tag: Optional[str] = None,
+    accept: Annotated[str | None, Header()] = None
+):
+    if accept is not None and accept.lower() != "application/json":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error" : "application/json is only the supproted Accept"})
+    if paste_id is None or user is None or tag is None:
+        raise None
+    return get_paste(session, paste_id, user, tag)
+
 @app.put("/pastebin/{paste_id}", response_model=PasteRead, status_code=status.HTTP_202_ACCEPTED)
 def update_bin(
     paste_id: int,
@@ -67,7 +81,7 @@ def update_bin(
     return update_paste(session, paste_db, paste_in)
 
 @app.delete("/pastebin/{paste_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_bin(paste_id: str, session: SessionDep):
+def delete_bin(paste_id: int, session: SessionDep):
     paste_db = session.get(Paste, paste_id)
     if paste_db is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"})

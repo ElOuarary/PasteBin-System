@@ -54,10 +54,9 @@ run_test "Health Check (GET /health)" 200 "curl $BASE_URL/health"
 
 # 2. Create Paste
 echo "Creating paste..."
-CREATE_BODY='{"content": "Hello, this is a test paste!"}'
-# We use -s to capture the body to extract the paste_id
+CREATE_BODY='{"content": "Hello, this is a test paste!", "tag": "test-tag"}'
 CREATE_RESP=$(curl -s -H "Content-Type: application/json" -H "Accept: application/json" -d "$CREATE_BODY" "$BASE_URL/pastebin")
-PASTE_ID=$(echo "$CREATE_RESP" | grep -oP '(?<="paste_id":")[^"]*')
+PASTE_ID=$(echo "$CREATE_RESP" | grep -oP '"(id|paste_id)":\s*[^,}]+' | head -1 | cut -d':' -f2 | tr -d ' "')
 
 if [ -z "$PASTE_ID" ]; then
     echo "CRITICAL: Failed to create paste or extract ID. Response: $CREATE_RESP"
@@ -69,8 +68,8 @@ echo "Paste created with ID: $PASTE_ID"
 run_test "Read Paste (GET /pastebin/$PASTE_ID)" 200 "curl -H \"Accept: application/json\" $BASE_URL/pastebin/$PASTE_ID"
 
 # 4. Update Paste
-UPDATE_BODY='{"content": "This content has been updated!"}'
-run_test "Update Paste (PUT /pastebin/$PASTE_ID)" 204 "curl -X PUT -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '$UPDATE_BODY' $BASE_URL/pastebin/$PASTE_ID"
+UPDATE_BODY='{"content": "This content has been updated!", "tag": "updated-tag"}'
+run_test "Update Paste (PUT /pastebin/$PASTE_ID)" 202 "curl -X PUT -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '$UPDATE_BODY' $BASE_URL/pastebin/$PASTE_ID"
 
 # 5. Verify Update
 run_test "Verify Update (GET /pastebin/$PASTE_ID)" 200 "curl -H \"Accept: application/json\" $BASE_URL/pastebin/$PASTE_ID"
@@ -85,25 +84,50 @@ echo "-----------------------------------------------------"
 echo "Sequential Happy Path Tests Completed."
 echo "-----------------------------------------------------"
 
+# --- EXPIRED CONTENT TESTS ---
+
+echo "Testing Expired Content..."
+# Create a paste that expired in 2000-01-01
+EXPIRED_BODY='{"content": "This is an expired paste", "expires_at": "2000-01-01T00:00:00Z"}'
+EXPIRED_RESP=$(curl -s -H "Content-Type: application/json" -H "Accept: application/json" -d "$EXPIRED_BODY" "$BASE_URL/pastebin")
+EXP_PASTE_ID=$(echo "$EXPIRED_RESP" | grep -oP '"(id|paste_id)":\s*[^,}]+' | head -1 | cut -d':' -f2 | tr -d ' "')
+
+if [ -n "$EXP_PASTE_ID" ]; then
+    run_test "Read Expired Paste (GET /pastebin/$EXP_PASTE_ID)" 410 "curl -H \"Accept: application/json\" $BASE_URL/pastebin/$EXP_PASTE_ID"
+
+    UPDATE_EXPIRED_BODY='{"content": "Trying to update expired"}'
+    run_test "Update Expired Paste (PUT /pastebin/$EXP_PASTE_ID)" 410 "curl -X PUT -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '$UPDATE_EXPIRED_BODY' $BASE_URL/pastebin/$EXP_PASTE_ID"
+
+    # Cleanup expired paste
+    curl -s -X DELETE $BASE_URL/pastebin/$EXP_PASTE_ID > /dev/null
+else
+    echo "CRITICAL: Failed to create expired paste for testing."
+fi
+
+echo "-----------------------------------------------------"
+
 # --- BAD PATHS (Negative Testing) ---
 
 # POST /pastebin
-run_test "POST - Missing Content-Type" 422 "curl -d '{\"content\": \"test\"}' $BASE_URL/pastebin"
-run_test "POST - Wrong Content-Type" 422 "curl -H \"Content-Type: text/plain\" -d '{\"content\": \"test\"}' $BASE_URL/pastebin"
-run_test "POST - Wrong Accept" 400 "curl -H \"Content-Type: application/json\" -H \"Accept: text/html\" -d '{\"content\": \"test\"}' $BASE_URL/pastebin"
-run_test "POST - Missing/Null Content" 422 "curl -H \"Content-Type: application/json\" -d '{\"content\": null}' $BASE_URL/pastebin"
+run_test "POST - Missing Content-Type (422)" 422 "curl -d '{\"content\": \"test\"}' $BASE_URL/pastebin"
+run_test "POST - Wrong Content-Type (422)" 422 "curl -H \"Content-Type: text/plain\" -d '{\"content\": \"test\"}' $BASE_URL/pastebin"
+run_test "POST - Wrong Accept (400)" 400 "curl -H \"Content-Type: application/json\" -H \"Accept: text/html\" -d '{\"content\": \"test\"}' $BASE_URL/pastebin"
+run_test "POST - Missing/Null Content (422)" 422 "curl -H \"Content-Type: application/json\" -d '{\"content\": null}' $BASE_URL/pastebin"
 
 # GET /pastebin/{id}
-run_test "GET - Wrong Accept" 400 "curl -H \"Accept: text/html\" $BASE_URL/pastebin/$PASTE_ID"
-run_test "GET - Invalid ID" 404 "curl -H \"Accept: application/json\" $BASE_URL/pastebin/non-existent-id"
+run_test "GET - Wrong Accept (400)" 400 "curl -H \"Accept: text/html\" $BASE_URL/pastebin/123"
+run_test "GET - Invalid ID (Non-numeric 422)" 422 "curl -H \"Accept: application/json\" $BASE_URL/pastebin/abc"
+run_test "GET - Not Found (404)" 404 "curl -H \"Accept: application/json\" $BASE_URL/pastebin/999999"
 
 # PUT /pastebin/{id}
-run_test "PUT - Missing Content-Type" 422 "curl -X PUT -H \"Accept: application/json\" -d '{\"content\": \"test\"}' $BASE_URL/pastebin/$PASTE_ID"
-run_test "PUT - Missing Accept" 400 "curl -X PUT -H \"Content-Type: application/json\" -d '{\"content\": \"test\"}' $BASE_URL/pastebin/$PASTE_ID"
-run_test "PUT - Invalid ID" 404 "curl -X PUT -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '{\"content\": \"test\"}' $BASE_URL/pastebin/non-existent-id"
+run_test "PUT - Missing Content-Type (422)" 422 "curl -X PUT -H \"Accept: application/json\" -d '{\"content\": \"test\"}' $BASE_URL/pastebin/123"
+run_test "PUT - Missing/Wrong Accept (400)" 400 "curl -X PUT -H \"Content-Type: application/json\" -d '{\"content\": \"test\"}' $BASE_URL/pastebin/123"
+run_test "PUT - Invalid ID (Non-numeric 422)" 422 "curl -X PUT -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '{\"content\": \"test\"}' $BASE_URL/pastebin/abc"
+run_test "PUT - Not Found (404)" 404 "curl -X PUT -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '{\"content\": \"test\"}' $BASE_URL/pastebin/999999"
 
 # DELETE /pastebin/{id}
-run_test "DELETE - Invalid ID" 404 "curl -X DELETE $BASE_URL/pastebin/non-existent-id"
+run_test "DELETE - Invalid ID (Non-numeric 422)" 422 "curl -X DELETE $BASE_URL/pastebin/abc"
+run_test "DELETE - Not Found (404)" 404 "curl -X DELETE $BASE_URL/pastebin/999999"
 
 echo "====================================================="
 echo "Tests Summary: $PASSED_COUNT / $TOTAL_COUNT passed"
