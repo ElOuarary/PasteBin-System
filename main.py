@@ -17,10 +17,14 @@ SessionDep = Annotated[Session, Depends(get_session)]
 async def lifespan(app: FastAPI):
     init_db()
     yield
+
+def content_type_validation(content_type: Annotated[str, Header()]):
+    if content_type.lower() != "application/json":
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail={"error": "application/json is the only supported value for the Content-Type"})    
     
-def accept_validation(accept: Annotated[str | None, Header()]):
-    if accept is not None and accept.lower() != "application/json":
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"error": "application/json is only the supported Accept"})
+def accept_validation(accept: Annotated[str | None, Header()] = None):
+    if accept is not None and accept.lower() not in ("*/*","application/json"):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"error": "application/json is only supported value for the Accept"})
 
 app = FastAPI(lifespan=lifespan)
 
@@ -28,7 +32,7 @@ app = FastAPI(lifespan=lifespan)
 def root():
     return {"Status": "Healthy"}
 
-@app.post("/pastebin", response_model=PasteRead, dependencies=[Depends(accept_validation)], status_code=status.HTTP_201_CREATED)
+@app.post("/pastebin", response_model=PasteRead, dependencies=[Depends(content_type_validation), Depends(accept_validation)], status_code=status.HTTP_201_CREATED)
 def write_pin(
     paste_in: PasteCreate,
     session: SessionDep
@@ -63,7 +67,7 @@ def read_pin_filtred(
     except PasteExpiredException as e:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail={"error": "content no longer available"})
 
-@app.put("/pastebin/{paste_id}", response_model=PasteRead, dependencies=[Depends(accept_validation)], status_code=status.HTTP_202_ACCEPTED)
+@app.put("/pastebin/{paste_id}", response_model=PasteRead, dependencies=[Depends(content_type_validation), Depends(accept_validation)], status_code=status.HTTP_202_ACCEPTED)
 def update_bin(
     paste_id: int,
     paste_in: PasteUpdate,

@@ -1,4 +1,6 @@
 .venv
-.md
-.log
-.db
+*.md
+*.log
+*.db
+*.pyc
+__pycache__

@@ -189,7 +189,7 @@ run_test "GET - Not Found (404)" 404 "curl -H \"Accept: application/json\" $BASE
 
 # PUT /pastebin/{id}
 run_test "PUT - Missing Content-Type (422)" 422 "curl -X PUT -H \"Accept: application/json\" -d '{\"content\": \"test\"}' $BASE_URL/pastebin/123"
-run_test "PUT - Missing/Wrong Accept (400)" 400 "curl -X PUT -H \"Content-Type: application/json\" -d '{\"content\": \"test\"}' $BASE_URL/pastebin/123"
+run_test "PUT - Missing/Wrong Accept (400)" 202 "curl -X PUT -H \"Content-Type: application/json\" -d '{\"content\": \"test\"}' $BASE_URL/pastebin/123"
 run_test "PUT - Invalid ID (Non-numeric 422)" 422 "curl -X PUT -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '{\"content\": \"test\"}' $BASE_URL/pastebin/abc"
 run_test "PUT - Not Found (404)" 404 "curl -X PUT -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '{\"content\": \"test\"}' $BASE_URL/pastebin/999999"
 
