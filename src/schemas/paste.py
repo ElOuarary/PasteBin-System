@@ -1,4 +1,4 @@
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, Field
 
 from datetime import datetime
 from typing import Optional
@@ -18,6 +18,11 @@ class PasteRead(SQLModel):
     view_count: int
     is_private: bool  
     tag: Optional[str] = None
+    
+class PasteQuery(SQLModel):
+    paste_id: int | None = Field(default=None, ge=0)
+    user: str | None = None
+    tag: str | None = None
     
 class PasteUpdate(SQLModel):
     expires_at: Optional[datetime] = None

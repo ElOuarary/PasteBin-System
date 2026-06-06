@@ -1,4 +1,4 @@
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, Header, Path, HTTPException, status
 from sqlmodel import Session
 
 from src.config.database import init_db, get_session
@@ -17,6 +17,10 @@ SessionDep = Annotated[Session, Depends(get_session)]
 async def lifespan(app: FastAPI):
     init_db()
     yield
+    
+def accept_validation(accept: Annotated[str | None, Header()]):
+    if accept is not None and accept.lower() != "application/json":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"error": "application/json is only the supported Accept"})
 
 app = FastAPI(lifespan=lifespan)
 
@@ -24,24 +28,18 @@ app = FastAPI(lifespan=lifespan)
 def root():
     return {"Status": "Healthy"}
 
-@app.post("/pastebin", response_model=PasteRead, status_code=status.HTTP_201_CREATED)
+@app.post("/pastebin", response_model=PasteRead, dependencies=[Depends(accept_validation)], status_code=status.HTTP_201_CREATED)
 def write_pin(
     paste_in: PasteCreate,
-    session: SessionDep,
-    accept: Annotated[str | None, Header()] = None
-    ):    
-    if accept is not None and accept.lower() != "application/json":
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"error": "application/json is only the supproted Accept"})
+    session: SessionDep
+    ):
     return create_paste(session, paste_in)
 
-@app.get("/pastebin/{paste_id}", response_model=PasteRead, status_code=status.HTTP_200_OK)
+@app.get("/pastebin/{paste_id}", response_model=PasteRead, dependencies=[Depends(accept_validation)], status_code=status.HTTP_200_OK)
 def read_pin(
-    paste_id: int,
-    session: SessionDep,
-    accept: Annotated[str | None, Header()] = None
+    paste_id: Annotated[int, Path(ge=0)],
+    session: SessionDep
     ):
-    if accept is not None and accept.lower() != "application/json":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error" : "application/json is only the supproted Accept"})
     try:
         paste = get_paste(session, paste_id)
         if paste is None:
@@ -50,16 +48,13 @@ def read_pin(
     except PasteExpiredException as e:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail={"error": "content no longer available"})
 
-@app.get("/pastebin", response_model=PasteRead, status_code=status.HTTP_200_OK)
+@app.get("/pastebin", response_model=PasteRead, dependencies=[Depends(accept_validation)], status_code=status.HTTP_200_OK)
 def read_pin_filtred(
     session: SessionDep,
     paste_id: Optional[int] = None,
     user: Optional[str] = None,
-    tag: Optional[str] = None,
-    accept: Annotated[str | None, Header()] = None
+    tag: Optional[str] = None
 ):
-    if accept is not None and accept.lower() != "application/json":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error" : "application/json is only the supproted Accept"})
     try:
         paste = get_paste(session, paste_id, user, tag)
         if paste is None:
@@ -68,15 +63,12 @@ def read_pin_filtred(
     except PasteExpiredException as e:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail={"error": "content no longer available"})
 
-@app.put("/pastebin/{paste_id}", response_model=PasteRead, status_code=status.HTTP_202_ACCEPTED)
+@app.put("/pastebin/{paste_id}", response_model=PasteRead, dependencies=[Depends(accept_validation)], status_code=status.HTTP_202_ACCEPTED)
 def update_bin(
     paste_id: int,
     paste_in: PasteUpdate,
-    session: SessionDep,
-    accept: Annotated[str | None, Header()] = None
+    session: SessionDep
     ):
-    if accept is not None and accept.lower() != "application/json":
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"error": "application/json is only the supproted accept"})
     paste_db = session.get(Paste, paste_id)
     if paste_db is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"})
@@ -89,6 +81,8 @@ def delete_bin(paste_id: int, session: SessionDep):
     paste_db = session.get(Paste, paste_id)
     if paste_db is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"})
+    elif paste_db.expires_at is not None and _is_expired(paste_db.expires_at):
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail={"error": "content no longer available"})
     delete_paste(session, paste_db)
     
 @app.delete("/pastes/expired", status_code=status.HTTP_204_NO_CONTENT)

@@ -37,7 +37,7 @@ def _get_paste(session: Session, paste_id: Optional[int] = None, user: Optional[
         tag_model = session.exec(select(Tag).where(Tag.name == tag)).first()
         
     if paste_id is not None:
-        if user_model is not None  and tag_model is not None:
+        if user_model is not None and tag_model is not None:
             return session.exec(select(Paste).where(Paste.id == paste_id).where(Paste.user_id == user_model.id).where(Paste.tag_id == tag_model.id)).first()
         elif user_model is not None:
             return session.exec(select(Paste).where(Paste.id == paste_id).where(Paste.user_id == user_model.id)).first()
