@@ -1,14 +1,14 @@
 from sqlmodel import SQLModel, Field, Relationship
-
-from .user import User
-from .tag import Tag
-
+from typing import Optional, TYPE_CHECKING
 from datetime import datetime, timezone
-from typing import Optional
+
+if TYPE_CHECKING:
+    from .user import User
+    from .tag import Tag
 
 class Paste(SQLModel, table=True):
     __tablename__ = "pastes"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int | None = Field(default=None, foreign_key="users.id")
     content: str = Field(nullable=False, max_length=10_000_000)
@@ -16,4 +16,6 @@ class Paste(SQLModel, table=True):
     expires_at: Optional[datetime] = Field(default=None, index=True)
     view_count: int = Field(default=0)
     is_private: Optional[bool] = Field(default=False)
-    tag_id: Optional[int] = Field(default=None, foreign_key="tags.id")
+
+    user: "User" = Relationship(back_populates="pastes")
+    tags: list["Tag"] = Relationship(back_populates="pastes")

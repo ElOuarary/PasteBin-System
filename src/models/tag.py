@@ -1,16 +1,13 @@
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Relationship
+from typing import Optional, TYPE_CHECKING
 
-from typing import Optional
+if TYPE_CHECKING:
+    from .paste import Paste
 
 class Tag(SQLModel, table=True):
     __tablename__ = "tags"
-    
+
     id: Optional[int] = Field(primary_key=True)
     name: str = Field(unique=True)
-    
-class PasteBinTag(SQLModel, table=True):
-    __tablename__ = "PasteBinTags"
-    
-    paste_id: int = Field(primary_key=True)
-    tag_id: int = Field(primary_key=True)
-    
+
+    pastes: list["Paste"] = Relationship(back_populates="tags")

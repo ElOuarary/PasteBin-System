@@ -7,7 +7,7 @@ class PasteCreate(SQLModel):
     content: str
     expires_at: Optional[datetime] = None
     is_private: Optional[bool] = False
-    tag: Optional[str] = None
+    tags: Optional[list[str]] = None
   
 class PasteRead(SQLModel):
     id: int
@@ -17,7 +17,7 @@ class PasteRead(SQLModel):
     expires_at: Optional[datetime] = None
     view_count: int
     is_private: bool  
-    tag: Optional[str] = None
+    tags: Optional[list[str]] = None
     
 class PasteQuery(SQLModel):
     paste_id: int | None = Field(default=None, ge=0)

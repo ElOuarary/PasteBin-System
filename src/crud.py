@@ -11,22 +11,29 @@ def _is_expired(expires_at: datetime) -> bool:
     return expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc)
 
 def create_paste(session: Session, paste_in: PasteCreate) -> PasteRead:
-    paste = Paste.model_validate(paste_in)
-    tag = None
-    if paste_in.tag is not None:
-        statement = select(Tag).where(Tag.name == paste_in.tag)
-        tag = session.exec(statement).first()
-        if tag is None:
-            tag = Tag(name=paste_in.tag)
-            session.add(tag)
-            session.commit()
-            session.refresh(tag)
-        paste.tag_id = tag.id
+    # Exclude tags from validation to avoid Relationship assignment error
+    paste_data = paste_in.model_dump(exclude={"tags"})
+    paste = Paste(**paste_data)
+
+    tags = []
+    if paste_in.tags:
+        statement = select(Tag).where(Tag.name.in_(paste_in.tags))
+        existing_tags = session.exec(statement).all()
+        existing_names = {tag.name for tag in existing_tags}
+
+        missing_tags = [Tag(name=name) for name in paste_in.tags if name not in existing_names]
+
+        tags = list(existing_tags) + missing_tags
+        paste.tags = tags
+
     session.add(paste)
     session.commit()
     session.refresh(paste)
+
     paste_read = PasteRead.model_validate(paste)
-    if tag is not None: paste_read.tag = tag.name
+    if paste.tags:
+        paste_read.tags = [tag.name for tag in paste.tags]
+
     return paste_read
 
 def _get_paste(session: Session, paste_id: Optional[int] = None, user: Optional[str] = None, tag: Optional[str] = None) -> Paste | None:
