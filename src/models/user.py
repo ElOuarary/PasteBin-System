@@ -12,5 +12,3 @@ class User(SQLModel, table=True):
     name: str = Field(index=True)
     email: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
-
-    pastes: list["Paste"] = Relationship(back_populates="user")

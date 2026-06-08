@@ -18,7 +18,7 @@ async def lifespan(app: FastAPI):
     init_db()
     yield
 
-def content_type_validation(content_type: Annotated[str, Header()]):
+def content_type_validation(content_type: Annotated[str, Header()] = "application/json"):
     if content_type.lower() != "application/json":
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail={"error": "application/json is the only supported value for the Content-Type"})    
     

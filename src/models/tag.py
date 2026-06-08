@@ -1,6 +1,8 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, TYPE_CHECKING
 
+from .link import PasteTagLink
+
 if TYPE_CHECKING:
     from .paste import Paste
 
@@ -10,4 +12,4 @@ class Tag(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True)
     name: str = Field(unique=True)
 
-    pastes: list["Paste"] = Relationship(back_populates="tags")
+    linked_pastes: list["Paste"] = Relationship(back_populates="linked_tags", link_model=PasteTagLink)

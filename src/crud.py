@@ -1,9 +1,11 @@
 from sqlmodel import Session, select, delete
+
 from .models import Paste, User, Tag
 from .schemas.paste import PasteCreate, PasteRead, PasteUpdate
 
 from datetime import datetime, timezone
 from typing import Optional
+
 class PasteExpiredException(Exception):
     pass
 
@@ -11,7 +13,6 @@ def _is_expired(expires_at: datetime) -> bool:
     return expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc)
 
 def create_paste(session: Session, paste_in: PasteCreate) -> PasteRead:
-    # Exclude tags from validation to avoid Relationship assignment error
     paste_data = paste_in.model_dump(exclude={"tags"})
     paste = Paste(**paste_data)
 
@@ -24,15 +25,15 @@ def create_paste(session: Session, paste_in: PasteCreate) -> PasteRead:
         missing_tags = [Tag(name=name) for name in paste_in.tags if name not in existing_names]
 
         tags = list(existing_tags) + missing_tags
-        paste.tags = tags
+        paste.linked_tags = tags
 
     session.add(paste)
     session.commit()
     session.refresh(paste)
 
     paste_read = PasteRead.model_validate(paste)
-    if paste.tags:
-        paste_read.tags = [tag.name for tag in paste.tags]
+    if paste.linked_tags:
+        paste_read.tags = [tag.name for tag in paste.linked_tags]
 
     return paste_read
 
