@@ -27,4 +27,4 @@ class PasteQuery(SQLModel):
 class PasteUpdate(SQLModel):
     expires_at: Optional[datetime] = None
     is_private: Optional[bool] = None
-    tag: Optional[str] = None
+    tag: Optional[list[str]] = None

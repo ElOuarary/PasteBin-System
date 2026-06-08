@@ -1,5 +1,4 @@
 from sqlmodel import Session, select, delete
-
 from .models import Paste, User, Tag
 from .schemas.paste import PasteCreate, PasteRead, PasteUpdate
 
@@ -37,30 +36,20 @@ def create_paste(session: Session, paste_in: PasteCreate) -> PasteRead:
 
     return paste_read
 
-def _get_paste(session: Session, paste_id: Optional[int] = None, user: Optional[str] = None, tag: Optional[str] = None) -> Paste | None:
-    user_model, tag_model = None, None
-    if user is not None:
-        user_model = session.exec(select(User).where(User.name == user)).first()
+def _get_paste(session: Session, paste_id: Optional[int] = None, name: Optional[str] = None, tag: Optional[str] = None) -> Paste | None:
+    statement = select(Paste)
+    
+    if name is not None:
+        statement = statement.join(User).where(User.name == name)
+        
     if tag is not None:
-        tag_model = session.exec(select(Tag).where(Tag.name == tag)).first()
+        statement = statement.join(Tag).where(Tag.name == name)
         
     if paste_id is not None:
-        if user_model is not None and tag_model is not None:
-            return session.exec(select(Paste).where(Paste.id == paste_id).where(Paste.user_id == user_model.id).where(Paste.tag_id == tag_model.id)).first()
-        elif user_model is not None:
-            return session.exec(select(Paste).where(Paste.id == paste_id).where(Paste.user_id == user_model.id)).first()
-        elif tag_model is not None:
-            return session.exec(select(Paste).where(Paste.id == paste_id).where(Paste.tag_id == tag_model.id)).first()
-        else:
-            return session.get(Paste, paste_id)
-    else:
-        if user_model is not None  and tag_model is not None:
-            return session.exec(select(Paste).where(Paste.user_id == user_model.id).where(Paste.tag_id == tag_model.id)).first()
-        elif user_model is not None:
-            return session.exec(select(Paste).where(Paste.user_id == user_model.id)).first()
-        elif tag_model is not None:
-            return session.exec(select(Paste).where(Paste.tag_id == tag_model.id)).first()
-
+        statement = statement.where(Paste.id == paste_id)
+        
+    return session.exec(statement).first()
+    
 def get_paste(session: Session, paste_id: Optional[int] = None, user: Optional[str] = None, tag: Optional[str] = None) -> PasteRead | None:
     paste = _get_paste(session, paste_id, user, tag)
     if paste:
@@ -73,16 +62,13 @@ def get_paste(session: Session, paste_id: Optional[int] = None, user: Optional[s
         
         paste_read = PasteRead.model_validate(paste)
         if paste.user_id is not None:
-            user = session.exec(select(User).where(User.id == paste.user_id)).first()
-            if user is not None:
-                paste_read.user = user.name
-        if paste.tag_id is not None:
-            tag = session.exec(select(Tag).where(Tag.id == paste.tag_id)).first()
-            if tag is not None:
-                paste_read.tag = tag.name
+            paste_read.user = paste.linked_user.name
+        if paste.linked_tags is not None:
+            paste_read.tags = [tag.name for tag in paste.linked_tags]
         return paste_read
     return paste
 
+# Working on the update paste to refactor it to more optimal solution
 def update_paste(session: Session, paste_db: Paste, paste_in: PasteUpdate) -> PasteRead | None:
     paste_data = paste_in.model_dump(exclude_unset=True)
     for key, value in paste_data.items():
