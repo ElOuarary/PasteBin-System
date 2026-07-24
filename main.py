@@ -24,7 +24,7 @@ def content_type_validation(content_type: Annotated[str, Header()] = "applicatio
     
 def accept_validation(accept: Annotated[str | None, Header()] = None):
     if accept is not None and accept.lower() not in ("*/*","application/json"):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail={"error": "application/json is only supported value for the Accept"})
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error": "application/json is only supported value for the Accept"})
 
 app = FastAPI(lifespan=lifespan)
 
