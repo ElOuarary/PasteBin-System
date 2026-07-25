@@ -1,4 +1,5 @@
 from sqlmodel import SQLModel, Field
+from pydantic import field_validator
 
 from datetime import datetime
 from typing import Optional
@@ -25,6 +26,6 @@ class PasteQuery(SQLModel):
     tag: str | None = None
     
 class PasteUpdate(SQLModel):
-    expires_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None # Need to add validation of the value of the expires datetime to be greater than the current datetime
     is_private: Optional[bool] = None
     tag: Optional[list[str]] = None
