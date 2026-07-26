@@ -1,15 +1,18 @@
-from sqlmodel import Session, select, delete
-from .models import Paste, User, Tag
+from datetime import UTC, datetime
+from typing import Optional
+
+from fastapi import HTTPException, status
+from sqlmodel import Session, col, delete, select, update
+
+from .models import Paste, Tag, User
 from .schemas.paste import PasteCreate, PasteRead, PasteUpdate
 
-from datetime import datetime, timezone
-from typing import Optional
 
 class PasteExpiredException(Exception):
     pass
 
 def _is_expired(expires_at: datetime) -> bool:
-    return expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc)
+    return expires_at.replace(tzinfo=UTC.utc) < datetime.now(UTC.utc)
 
 def create_paste(session: Session, paste_in: PasteCreate) -> PasteRead:
     paste_data = paste_in.model_dump(exclude={"tags"})
@@ -43,7 +46,7 @@ def _get_paste(session: Session, paste_id: Optional[int] = None, name: Optional[
         statement = statement.join(User).where(User.name == name)
         
     if tag is not None:
-        statement = statement.join(Tag).where(Tag.name == name)
+        statement = statement.join(Tag).where(Tag.name == tag)
         
     if paste_id is not None:
         statement = statement.where(Paste.id == paste_id)
@@ -55,8 +58,8 @@ def get_paste(session: Session, paste_id: Optional[int] = None, user: Optional[s
     if paste:
         if paste.expires_at is not None and _is_expired(paste.expires_at):
             raise PasteExpiredException
-        paste.view_count += 1
-        session.add(paste)
+        statement = update(Paste).where(Paste.id == paste_id).values(view_count=paste.view_count+1) # I will need to send another round trip to the db
+        session.exec(statement)
         session.commit()
         session.refresh(paste)
         
@@ -73,9 +76,10 @@ def update_paste(session: Session, paste_db: Paste, paste_in: PasteUpdate) -> Pa
     paste_data = paste_in.model_dump(exclude_unset=True)
     for key, value in paste_data.items():
         if key == "tag":
-            tag = session.exec(select(Tag).where(Tag.name == paste_in.tag)).first()
-            if tag is None:
-                session.add(Tag(name=value))
+            tag = session.exec(select(Tag).where(col(Tag.name).not_in(value))).all()
+            if tag is not None:
+                for v in value:
+                    session.add(Tag(name=v))
                 session.commit()
                 tag = session.exec(select(Tag).where(Tag.name == paste_in.tag)).first()
             setattr(paste_db, "tag_id", tag.id)
@@ -90,7 +94,7 @@ def update_paste(session: Session, paste_db: Paste, paste_in: PasteUpdate) -> Pa
     if paste_db.tag_id is not None:
         tag = session.exec(select(Tag).where(Tag.id == paste_db.tag_id)).first()
         if tag is not None:
-            paste_read.tag = tag.name
+            paste_read.tags = tag.name
         return paste_read
     return paste_read
         
@@ -98,9 +102,15 @@ def update_paste(session: Session, paste_db: Paste, paste_in: PasteUpdate) -> Pa
 def delete_paste(session: Session, paste_db: Paste) -> None:
     session.delete(paste_db)
     session.commit()
-    return
 
 def delete_expired(session: Session) -> None:
-    session.exec(delete(Paste).where(Paste.expires_at < datetime.now(timezone.utc)))
+    session.exec(delete(Paste).where(Paste.expires_at < datetime.now(UTC.utc)))
     session.commit()
-    return
+
+def get_validate_paste(session: Session, paste_id: int):
+    paste_db = session.get(Paste, paste_id)
+    if paste_db is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"})
+    elif paste_db.expires_at is not None and _is_expired(paste_db.expires_at):
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail={"error": "content no longer available"})
+    return paste_db

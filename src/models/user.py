@@ -1,6 +1,8 @@
-from sqlmodel import SQLModel, Relationship, Field
+from datetime import datetime, UTC
 from typing import Optional, TYPE_CHECKING
-from datetime import datetime, timezone
+
+from sqlmodel import SQLModel, Relationship, Field
+
 
 if TYPE_CHECKING:
     from .paste import Paste
@@ -11,6 +13,6 @@ class User(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True)
     name: str = Field(index=True)
     email: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC), index=True)
     
     linked_pastes: list["Paste"] = Relationship(back_populates="linked_user")

@@ -1,6 +1,11 @@
-from sqlmodel import SQLModel, Session, create_engine
+import os
 
-DATABASE_URL = "postgresql+psycopg2://developer:1234567890@localhost:5432/dev_db"
+from dotenv import load_dotenv
+from sqlmodel import Session, SQLModel, create_engine
+
+load_dotenv()
+
+DATABASE_URL = os.environ["DATABASE_URL"]
 engine = create_engine(DATABASE_URL, echo=False)
 
 def init_db():

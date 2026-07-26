@@ -1,11 +1,11 @@
 from fastapi import Depends, FastAPI, Header, Path, HTTPException, status
 from sqlmodel import Session
 
-from src.config.database import init_db, get_session
+from src.config.database import get_session
 from src.models import Paste
 from src.schemas.paste import PasteCreate, PasteRead, PasteUpdate
 
-from src.crud import PasteExpiredException, create_paste, get_paste, update_paste, delete_paste, delete_expired, _is_expired
+from src.crud import PasteExpiredException, create_paste, get_paste, update_paste, delete_paste, delete_expired, get_validate_paste
 
 from typing import Annotated, Optional
 
@@ -67,20 +67,12 @@ def update_bin(
     paste_in: PasteUpdate,
     session: SessionDep
     ):
-    paste_db = session.get(Paste, paste_id)
-    if paste_db is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"})
-    elif paste_db.expires_at is not None and _is_expired(paste_db.expires_at):
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail={"error": "content no longer available"})
+    paste_db = get_validate_paste(session, paste_id)
     return update_paste(session, paste_db, paste_in)
 
 @app.delete("/paste/{paste_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_bin(paste_id: int, session: SessionDep):
-    paste_db = session.get(Paste, paste_id)
-    if paste_db is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"})
-    elif paste_db.expires_at is not None and _is_expired(paste_db.expires_at):
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail={"error": "content no longer available"})
+    paste_db = get_validate_paste(session, paste_id)
     delete_paste(session, paste_db)
     
 @app.delete("/pastes/expired", status_code=status.HTTP_204_NO_CONTENT)
