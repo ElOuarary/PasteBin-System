@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlmodel import Session, col, delete, select, update
 
-from .models import Paste, Tag, User
+from .models import Paste, PasteTagLink, Tag, User
 from .schemas.paste import PasteCreate, PasteRead, PasteUpdate
 
 
@@ -42,16 +42,16 @@ def create_paste(session: Session, paste_in: PasteCreate) -> PasteRead:
 def _get_paste(session: Session, paste_id: Optional[int] = None, name: Optional[str] = None, tag: Optional[str] = None) -> Paste | None:
     statement = select(Paste)
     
-    if name is not None:
-        statement = statement.join(User).where(User.name == name)
-        
-    if tag is not None:
-        statement = statement.join(Tag).where(Tag.name == tag)
-        
     if paste_id is not None:
         statement = statement.where(Paste.id == paste_id)
+
+    if name is not None:
+        statement = statement.join(User, Paste.user_id == User.id).where(User.name == name)
         
-    return session.exec(statement).first()
+    if tag is not None:
+        statement = statement.join(PasteTagLink, PasteTagLink.paste_id == Paste.id).join(Tag, Tag.id == PasteTagLink.paste_id).where(Tag.name == tag)
+            
+    return session.exec(statement).all()
     
 def get_paste(session: Session, paste_id: Optional[int] = None, user: Optional[str] = None, tag: Optional[str] = None) -> PasteRead | None:
     paste = _get_paste(session, paste_id, user, tag)
@@ -71,20 +71,17 @@ def get_paste(session: Session, paste_id: Optional[int] = None, user: Optional[s
         return paste_read
     return paste
 
-# Working on the update paste to refactor it to more optimal solution
 def update_paste(session: Session, paste_db: Paste, paste_in: PasteUpdate) -> PasteRead | None:
     paste_data = paste_in.model_dump(exclude_unset=True)
     for key, value in paste_data.items():
         if key == "tag":
-            tag = session.exec(select(Tag).where(col(Tag.name).not_in(value))).all()
-            if tag is not None:
-                for v in value:
-                    session.add(Tag(name=v))
-                session.commit()
-                tag = session.exec(select(Tag).where(Tag.name == paste_in.tag)).first()
-            setattr(paste_db, "tag_id", tag.id)
+            existing_tags = session.exec(select(Tag).where(col(Tag.name).in_(value))).all()
+            existing_tags = {tag.name for tag in existing_tags}
+            missing_tags = [Tag(name=name) for name in paste_data if name not in existing_tags]
+            tags = list(existing_tags) + missing_tags
+            paste_db.linked_tags = tags
             continue
-        setattr(paste_db, key, value)
+        paste_db[key] = value
     session.add(paste_db)
     session.commit()
     session.refresh(paste_db)
