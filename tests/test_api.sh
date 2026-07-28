@@ -58,7 +58,7 @@ run_test "Health Check (GET /health)" 200 "curl $BASE_URL/health"
 
 # 2. Create Paste
 echo "Creating paste..."
-CREATE_BODY='{"content": "Hello, this is a test paste!", "tag": "test-tag"}'
+CREATE_BODY='{"content": "Hello, this is a test paste!", "tags": ["test-tag"]}'
 CREATE_RESP=$(curl -s -H "Content-Type: application/json" -H "Accept: application/json" -d "$CREATE_BODY" "$BASE_URL/paste")
 PASTE_ID=$(echo "$CREATE_RESP" | grep -oP '"(id|paste_id)":\s*[^,}]+' | head -1 | cut -d':' -f2 | tr -d ' "')
 
@@ -72,7 +72,7 @@ echo "Paste created with ID: $PASTE_ID"
 run_test "Read Paste (GET /paste/$PASTE_ID)" 200 "curl -H \"Accept: application/json\" $BASE_URL/paste/$PASTE_ID"
 
 # 4. Update Paste
-UPDATE_BODY='{"content": "This content has been updated!", "tag": "updated-tag"}'
+UPDATE_BODY='{"content": "This content has been updated!", "tags": ["updated-tag"]}'
 run_test "Update Paste (PUT /paste/$PASTE_ID)" 202 "curl -X PUT -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '$UPDATE_BODY' $BASE_URL/paste/$PASTE_ID"
 
 # 5. Verify Update
@@ -93,7 +93,7 @@ echo "-----------------------------------------------------"
 echo "Testing Query Parameters..."
 # Create a paste specifically for query param testing
 QUERY_TAG="query-tag"
-QUERY_BODY="{\"content\": \"Query param test paste\", \"tag\": \"$QUERY_TAG\"}"
+QUERY_BODY="{\"content\": \"Query param test paste\", \"tags\": [\"$QUERY_TAG\"]}"
 QUERY_RESP=$(curl -s -H "Content-Type: application/json" -H "Accept: application/json" -d "$QUERY_BODY" "$BASE_URL/paste")
 QUERY_PASTE_ID=$(echo "$QUERY_RESP" | grep -oP '"(id|paste_id)":\s*[^,}]+' | head -1 | cut -d':' -f2 | tr -d ' "')
 

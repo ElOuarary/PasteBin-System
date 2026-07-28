@@ -1,14 +1,10 @@
 import os
-
 from logging.config import fileConfig
 
 from alembic import context
 from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
-
-from src.models import Paste, PasteTagLink, Tag, User
-
 
 load_dotenv()
 DATABASE_URL = os.environ["DATABASE_URL"]
@@ -74,9 +70,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
