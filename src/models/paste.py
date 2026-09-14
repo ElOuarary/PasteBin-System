@@ -1,7 +1,7 @@
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlmodel import Column, DateTime, SQLModel, Field, Relationship
+from sqlmodel import Field, Relationship, Column, DateTime, SQLModel 
 
 from .link import PasteTagLink
 from .user import User
@@ -21,7 +21,7 @@ class Paste(SQLModel, table=True):
     view_count: int = Field(default=0)
     is_private: bool | None = Field(default=False)
 
-    linked_user: User = Relationship(back_populates="linked_pastes")
+    linked_user: User = Relationship(back_populates="linked_pastes", cascade_delete=True)
     linked_tags: list["Tag"] = Relationship(
-        back_populates="linked_pastes", cascade_delete=True, link_model=PasteTagLink
+        back_populates="linked_pastes",  cascade_delete=True, link_model=PasteTagLink
     )

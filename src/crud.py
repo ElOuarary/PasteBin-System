@@ -126,7 +126,7 @@ def update_paste(
                 else:
                     missing_tags = [Tag(name=name) for name in value]
                 tags = list(existing_tags) + missing_tags
-            paste_db.linked_tags = tags
+                paste_db.linked_tags = tags
             continue
         statement = statement.values({key: value})
     session.exec(statement)
@@ -146,8 +146,13 @@ def delete_paste(session: Session, paste_db: Paste) -> None:
 
 
 def delete_expired(session: Session) -> None:
-    session.exec(delete(Paste).where(Paste.expires_at < datetime.now(UTC)))
-    session.commit()
+    expired = session.exec(select(Paste).where(Paste.expires_at < datetime.now(UTC))).all()
+    if expired:
+        for paste in expired:
+            paste.linked_tags.clear()
+            session.add(paste)
+            session.delete(paste)
+        session.commit()
 
 
 def validate_paste(paste_db: Paste):
