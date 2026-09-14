@@ -46,7 +46,7 @@ def _get_paste(
 ) -> Paste | None:
     if paste_id is None and name is None and tag is None:
         return None
-    
+
     statement = select(Paste)
 
     if paste_id is not None:
@@ -64,7 +64,7 @@ def _get_paste(
             .where(Tag.name == tag)
         )
 
-    return session.exec(statement).first()
+    return session.exec(statement).all()
 
 
 def get_paste(
@@ -72,35 +72,38 @@ def get_paste(
     paste_id: int | None = None,
     user: str | None = None,
     tag: str | None = None,
-) -> PasteRead | None:
-    paste_db = _get_paste(session, paste_id, user, tag)
-    if paste_db is None:
+) -> list[PasteRead] | None:
+    paste_db: list[Paste] = _get_paste(session, paste_id, user, tag)
+    if len(paste_db) == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"}
         )
-    elif paste_db.expires_at is not None and _is_expired(paste_db.expires_at):
-        raise HTTPException(
-            status_code=status.HTTP_410_GONE,
-            detail={"error": "content no longer available"},
-        )
-    if paste_db:
-        validate_paste(paste_db)
+    else:
+        for paste in paste_db:
+            if paste.expires_at is not None and _is_expired(paste.expires_at):
+                raise HTTPException(
+                    status_code=status.HTTP_410_GONE,
+                    detail={"error": "content no longer available"},
+                )
+    if len(paste_db) == 1:
         statement = (
             update(Paste)
-            .where(Paste.id == paste_id)
-            .values(view_count=paste_db.view_count + 1)
+            .where(Paste.id == paste_db[0].id)
+            .values(view_count=paste_db[0].view_count + 1)
         )
         session.exec(statement)
         session.commit()
-        session.refresh(paste_db)
+        session.refresh(paste_db[0])
 
-        paste_read = PasteRead.model_validate(paste_db)
-        if paste_db.user_id is not None:
-            paste_read.user = paste_db.linked_user.name
-        if paste_db.linked_tags is not None:
-            paste_read.tags = [tag.name for tag in paste_db.linked_tags]
-        return paste_read
-    return paste_db
+    pastes_read = []
+    for paste in paste_db:
+        paste_read = PasteRead.model_validate(paste)
+        if paste.user_id is not None:
+            paste_read.user = paste.linked_user.name
+        if paste.linked_tags is not None:
+            paste_read.tags = [tag.name for tag in paste.linked_tags]
+        pastes_read.append(paste_read)
+    return pastes_read
 
 
 def update_paste(
@@ -116,14 +119,14 @@ def update_paste(
                 ).all()
                 if len(existing_tags) != 0:
                     missing_tags = [
-                        Tag(name=name) for name in value if name not in {tag.name for tag in existing_tags}
+                        Tag(name=name)
+                        for name in value
+                        if name not in {tag.name for tag in existing_tags}
                     ]
                 else:
-                    missing_tags = [
-                        Tag(name=name) for name in value
-                    ]
+                    missing_tags = [Tag(name=name) for name in value]
                 tags = list(existing_tags) + missing_tags
-            paste_db.linked_tags = tags
+                paste_db.linked_tags = tags
             continue
         statement = statement.values({key: value})
     session.exec(statement)
@@ -133,7 +136,7 @@ def update_paste(
     paste_read = PasteRead.model_validate(paste_db)
 
     if paste_db.linked_tags is not None:
-        paste_read.tags = paste_data.get("tags")
+        paste_read.tags = [tag.name for tag in paste_db.linked_tags]
     return paste_read
 
 
@@ -143,8 +146,14 @@ def delete_paste(session: Session, paste_db: Paste) -> None:
 
 
 def delete_expired(session: Session) -> None:
-    session.exec(delete(Paste).where(Paste.expires_at < datetime.now(UTC)))
-    session.commit()
+    expired = session.exec(select(Paste).where(Paste.expires_at < datetime.now(UTC))).all()
+    if expired:
+        for paste in expired:
+            paste.linked_tags.clear()
+            session.add(paste)
+            session.delete(paste)
+        session.commit()
+
 
 def validate_paste(paste_db: Paste):
     if paste_db is None:
@@ -156,7 +165,8 @@ def validate_paste(paste_db: Paste):
             status_code=status.HTTP_410_GONE,
             detail={"error": "content no longer available"},
         )
-    
+
+
 def get_validate_paste(session: Session, paste_id: int):
     paste_db = session.get(Paste, paste_id)
     validate_paste(paste_db)
