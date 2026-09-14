@@ -28,7 +28,7 @@ class PasteQuery(SQLModel):
 
 
 class PasteUpdate(SQLModel):
-    content: str | None = Field(min_length=1, max_length=10_000_000)
+    content: str | None = Field(default=None, min_length=1, max_length=10_000_000)
     expires_at: datetime | None = (
         None  # Need to add validation of the value of the expires datetime to be greater than the current datetime
     )

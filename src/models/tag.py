@@ -15,5 +15,5 @@ class Tag(SQLModel, table=True):
     name: str = Field(unique=True)
 
     linked_pastes: list["Paste"] = Relationship(
-        back_populates="linked_tags", link_model=PasteTagLink
+        back_populates="linked_tags", cascade_delete=True, link_model=PasteTagLink
     )

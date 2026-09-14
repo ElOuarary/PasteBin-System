@@ -57,17 +57,17 @@ def write_pin(paste_in: PasteCreate, session: SessionDep):
 
 @app.get(
     "/paste/{paste_id}",
-    response_model=PasteRead,
+    response_model=list[PasteRead],
     dependencies=[Depends(accept_validation)],
     status_code=status.HTTP_200_OK,
 )
 def read_pin(paste_id: Annotated[int, Path(ge=0)], session: SessionDep):
-    return get_paste(session, paste_id) 
+    return get_paste(session, paste_id)
 
 
 @app.get(
     "/paste",
-    response_model=PasteRead,
+    response_model=list[PasteRead],
     dependencies=[Depends(accept_validation)],
     status_code=status.HTTP_200_OK,
 )
