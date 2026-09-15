@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Path, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Path, status
 from sqlmodel import Session
 
 from src.config.database import get_session
@@ -10,6 +10,7 @@ from src.crud import (
     delete_paste,
     get_paste,
     get_validate_paste,
+    search_pastes,
     update_paste,
 )
 from src.schemas.paste import PasteCreate, PasteRead, PasteUpdate
@@ -30,10 +31,15 @@ def content_type_validation(
 
 
 def accept_validation(accept: Annotated[str | None, Header()] = None):
-    if accept is not None and accept.lower() not in ("*/*", "application/json"):
+    if accept is not None and accept.lower() not in ("application/json"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "application/json is only supported value for the Accept"},
+        )
+    if accept is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "application/json is needed in the request's header"},
         )
 
 
@@ -79,6 +85,16 @@ def read_pin_filtred(
 ):
 
     return get_paste(session, paste_id, user, tag)
+
+
+@app.get(
+    "/pastes",
+    response_model=list[PasteRead],
+    dependencies=[Depends(accept_validation)],
+    status_code=status.HTTP_200_OK
+)
+def search_bin(session: SessionDep, search: str, limit: int | None = Query(default=1000, ge=0, le=1000), offset: int | None = Query(default=0, ge=0)):
+    return search_pastes(session, search, limit, offset)
 
 
 @app.put(
