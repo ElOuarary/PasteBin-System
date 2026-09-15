@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Path, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Path, status
 from sqlmodel import Session
 
 from src.config.database import get_session
@@ -93,7 +93,7 @@ def read_pin_filtred(
     dependencies=[Depends(accept_validation)],
     status_code=status.HTTP_200_OK
 )
-def search_bin(session: SessionDep, search: str, limit: int | None = 10_000, offset: int | None = 0):
+def search_bin(session: SessionDep, search: str, limit: int | None = Query(default=1000, ge=0, le=1000), offset: int | None = Query(default=0, ge=0)):
     return search_pastes(session, search, limit, offset)
 
 
