@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 
+from src.models import Paste, PasteTagLink, Tag, User
+
 load_dotenv()
 DATABASE_URL = os.environ["DATABASE_URL"]
 
@@ -19,6 +21,8 @@ config.set_main_option("sqlalchemy.url", DATABASE_URL)
 # This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
+compare_type = True
 
 # add your model's MetaData object here
 # for 'autogenerate' support

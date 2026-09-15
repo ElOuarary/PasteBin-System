@@ -74,7 +74,7 @@ def get_paste(
     tag: str | None = None,
 ) -> list[PasteRead] | None:
     paste_db: list[Paste] = _get_paste(session, paste_id, user, tag)
-    if len(paste_db) == 0:
+    if paste_db is None or len(paste_db) == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"}
         )
@@ -106,8 +106,8 @@ def get_paste(
     return pastes_read
 
 
-def search_pastes(session: Session, keyword: str) -> list[PasteRead]:
-    paste_db: list[Paste] = session.exec(select(Paste).where(col(Paste.content).ilike(f"%{keyword}%"))).all()
+def search_pastes(session: Session, keyword: str, limit: int | None = 10_000, offset: int | None = 0) -> list[PasteRead]:
+    paste_db: list[Paste] = session.exec(select(Paste).where(col(Paste.content).ilike(f"%{keyword}%")).limit(limit).offset(offset)).all()
     if len(paste_db) == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"}

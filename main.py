@@ -31,10 +31,15 @@ def content_type_validation(
 
 
 def accept_validation(accept: Annotated[str | None, Header()] = None):
-    if accept is not None and accept.lower() not in ("*/*", "application/json"):
+    if accept is not None and accept.lower() not in ("application/json"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "application/json is only supported value for the Accept"},
+        )
+    if accept is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "application/json is needed in the request's header"},
         )
 
 
@@ -88,8 +93,8 @@ def read_pin_filtred(
     dependencies=[Depends(accept_validation)],
     status_code=status.HTTP_200_OK
 )
-def search_bin(session: SessionDep, search: str):
-    return search_pastes(session, search)
+def search_bin(session: SessionDep, search: str, limit: int | None = 10_000, offset: int | None = 0):
+    return search_pastes(session, search, limit, offset)
 
 
 @app.put(

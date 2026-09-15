@@ -180,7 +180,7 @@ echo "-----------------------------------------------------"
 run_test "POST - Missing Content-Type (422)" 422 "curl -d '{\"content\": \"test\"}' $BASE_URL/paste"
 run_test "POST - Wrong Content-Type (422)" 422 "curl -H \"Content-Type: text/plain\" -d '{\"content\": \"test\"}' $BASE_URL/paste"
 run_test "POST - Wrong Accept (400)" 400 "curl -H \"Content-Type: application/json\" -H \"Accept: text/html\" -d '{\"content\": \"test\"}' $BASE_URL/paste"
-run_test "POST - Missing/Null Content (422)" 422 "curl -H \"Content-Type: application/json\" -d '{\"content\": null}' $BASE_URL/paste"
+run_test "POST - Missing/Null Accept (400))" 400 "curl -H \"Content-Type: application/json\" -d '{\"content\": null}' $BASE_URL/paste"
 
 # GET /paste/{id}
 run_test "GET - Wrong Accept (400)" 400 "curl -H \"Accept: text/html\" $BASE_URL/paste/123"
@@ -189,7 +189,7 @@ run_test "GET - Not Found (404)" 404 "curl -H \"Accept: application/json\" $BASE
 
 # PUT /paste/{id}
 run_test "PUT - Missing Content-Type (422)" 422 "curl -X PUT -H \"Accept: application/json\" -d '{\"content\": \"test\"}' $BASE_URL/paste/123"
-run_test "PUT - Missing/Wrong Accept (400)" 202 "curl -X PUT -H \"Content-Type: application/json\" -d '{\"content\": \"test\"}' $BASE_URL/paste/123"
+run_test "PUT - Missing Accept (400)" 400 "curl -X PUT -H \"Content-Type: application/json\" -d '{\"content\": \"test\"}' $BASE_URL/paste/123"
 run_test "PUT - Invalid ID (Non-numeric 422)" 422 "curl -X PUT -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '{\"content\": \"test\"}' $BASE_URL/paste/abc"
 run_test "PUT - Not Found (404)" 404 "curl -X PUT -H \"Content-Type: application/json\" -H \"Accept: application/json\" -d '{\"content\": \"test\"}' $BASE_URL/paste/999999"
 
