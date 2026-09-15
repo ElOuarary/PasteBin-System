@@ -106,6 +106,38 @@ def get_paste(
     return pastes_read
 
 
+def search_pastes(session: Session, keyword: str) -> list[PasteRead]:
+    paste_db: list[Paste] = session.exec(select(Paste).where(col(Paste.content).ilike(f"%{keyword}%"))).all()
+    if len(paste_db) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"}
+        )
+    else:
+        for paste in paste_db:
+            if paste.expires_at is not None and _is_expired(paste.expires_at):
+                raise HTTPException(
+                    status_code=status.HTTP_410_GONE,
+                    detail={"error": "content no longer available"}
+                )
+
+    if len(paste_db) == 1:
+        statement = update(Paste).where(Paste.id == paste_db[0].id).values(view_count=paste_db[0].view_count + 1)
+        session.exec(statement)
+        session.commit()
+        session.refresh(paste_db[0])
+
+    pastes_read = []
+    for paste in paste_db:
+        paste_read = PasteRead.model_validate(paste)
+
+        if paste.user_id is not None:
+            paste_read.user = paste.linked_user.name
+        if paste.linked_tags is not None:
+            paste_read.tags = [tag.name for tag in paste.linked_tags]
+        pastes_read.append(paste_read)
+
+    return pastes_read
+
 def update_paste(
     session: Session, paste_db: Paste, paste_in: PasteUpdate
 ) -> PasteRead | None:
@@ -145,6 +177,7 @@ def delete_paste(session: Session, paste_db: Paste) -> None:
     session.commit()
 
 
+# Not reliable for now as It only deletes the records in the Paste table, without removing the associated one in PasteTag
 def delete_expired(session: Session) -> None:
     expired = session.exec(select(Paste).where(Paste.expires_at < datetime.now(UTC))).all()
     if expired:

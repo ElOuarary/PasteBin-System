@@ -10,6 +10,7 @@ from src.crud import (
     delete_paste,
     get_paste,
     get_validate_paste,
+    search_pastes,
     update_paste,
 )
 from src.schemas.paste import PasteCreate, PasteRead, PasteUpdate
@@ -79,6 +80,16 @@ def read_pin_filtred(
 ):
 
     return get_paste(session, paste_id, user, tag)
+
+
+@app.get(
+    "/pastes",
+    response_model=list[PasteRead],
+    dependencies=[Depends(accept_validation)],
+    status_code=status.HTTP_200_OK
+)
+def search_bin(session: SessionDep, search: str):
+    return search_pastes(session, search)
 
 
 @app.put(
