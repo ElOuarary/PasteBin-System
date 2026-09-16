@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlmodel import Field, Relationship, Column, DateTime, SQLModel 
+from sqlmodel import Field, Relationship, Column, DateTime, SQLModel, Index
 
 from .link import PasteTagLink
 from .user import User
@@ -24,4 +24,9 @@ class Paste(SQLModel, table=True):
     linked_user: User = Relationship(back_populates="linked_pastes")
     linked_tags: list["Tag"] = Relationship(
         back_populates="linked_pastes", link_model=PasteTagLink
+    )
+
+
+    __table_args__ = (
+        Index("content_idx", "content", postgresql_ops={"content": "gin_trgm_ops"}, postgresql_using='gin'),
     )

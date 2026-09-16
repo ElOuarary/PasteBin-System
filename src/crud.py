@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 from sqlmodel import Session, col, select, update
-
+from sqlalchemy.orm import selectinload
 from .models import Paste, PasteTagLink, Tag, User
 from .schemas.paste import PasteCreate, PasteRead, PasteUpdate
 
@@ -53,16 +53,13 @@ def _get_paste(
         statement = statement.where(Paste.id == paste_id)
 
     if name is not None:
+        statement = (statement.options(selectinload(Paste.linked_user)))
         statement = statement.join(User, Paste.user_id == User.id).where(
             User.name == name
         )
 
     if tag is not None:
-        statement = (
-            statement.join(PasteTagLink, PasteTagLink.paste_id == Paste.id)
-            .join(Tag, Tag.id == PasteTagLink.tag_id)
-            .where(Tag.name == tag)
-        )
+        statement = (statement.options(selectinload(Paste.linked_tags)))
 
     return session.exec(statement).all()
 
