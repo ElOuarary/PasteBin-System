@@ -59,7 +59,7 @@ def _get_paste(
         )
 
     if tag is not None:
-        statement = (statement.options(selectinload(Paste.linked_tags)))
+        statement = (statement.where(Paste.linked_tags.any(Tag.name == tag)).options(selectinload(Paste.linked_tags)))
 
     return session.exec(statement).all()
 
@@ -117,6 +117,7 @@ def update_paste(
 ) -> PasteRead | None:
     paste_data = paste_in.model_dump(exclude_unset=True)
     statement = update(Paste).where(Paste.id == paste_db.id)
+    updates = {}
     for key, value in paste_data.items():
         if key == "tags":
             if value is not None:
@@ -133,11 +134,16 @@ def update_paste(
                     missing_tags = [Tag(name=name) for name in value]
                 tags = list(existing_tags) + missing_tags
                 paste_db.linked_tags = tags
-            continue
-        statement = statement.values({key: value})
-    session.exec(statement)
-    session.commit()
 
+            continue
+
+        updates[key] = value
+        
+    if len(updates) > 0:
+        statement = statement.values(**updates)
+        session.exec(statement)
+
+    session.commit()
     session.refresh(paste_db)
     paste_read = PasteRead.model_validate(paste_db)
 
