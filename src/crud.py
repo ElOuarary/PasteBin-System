@@ -66,14 +66,13 @@ def _get_paste(
     return session.exec(statement).all()
 
 
-def _validate_paste_list(pastes: list[Paste] | None, search: bool = False) -> list[Paste]:
+def _validate_paste_list(pastes: list[Paste] | None) -> list[Paste]:
     if pastes is None or len(pastes) == 0:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"}
         )
     elif (
         len(pastes) == 1
-        and not search
         and pastes[0].expires_at is not None
         and _is_expired(pastes[0].expires_at)
     ):
@@ -88,8 +87,8 @@ def _validate_paste_list(pastes: list[Paste] | None, search: bool = False) -> li
         ]
 
 
-def helper_func(session: Session, pastes: list[Paste]) -> list[PasteRead]:
-    if len(pastes) == 1:
+def helper_func(session: Session, pastes: list[Paste], search: bool = False) -> list[PasteRead]:
+    if len(pastes) == 1 and not search:
         statement = (
             update(Paste)
             .where(Paste.id == pastes[0].id)
@@ -133,7 +132,7 @@ def search_pastes(
         .offset(offset)
     ).all()
     paste_db: list[Paste] = _validate_paste_list(paste_db, search=True)
-    return helper_func(session, paste_db)
+    return helper_func(session, paste_db, search=True)
 
 
 def update_paste(
