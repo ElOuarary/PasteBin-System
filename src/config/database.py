@@ -6,7 +6,7 @@ from sqlmodel import Session, create_engine
 load_dotenv()
 
 DATABASE_URL = os.environ["DATABASE_URL"]
-engine = create_engine(DATABASE_URL, echo=False)
+engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 
 
 def get_session():

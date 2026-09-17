@@ -184,7 +184,7 @@ echo "$REQ_BODY" | jq -e --arg t "$TAG_SHARED" '.[0].tags | index($t) != null' >
     && pass "DELETE expired: shared tag kept on live paste" \
     || fail "DELETE expired: shared tag kept on live paste" "$REQ_BODY"
 
-# ---------- 8. search matches + no-match 404 ----------
+# ---------- 8. search matches + no-match [] ----------
 KW="kw${SUFFIX//-/}x"
 req POST "$BASE_URL/paste" "{\"content\": \"needle $KW doc0\"}"
 S1=$(J "$REQ_BODY" '.id'); track "$S1"
@@ -197,8 +197,8 @@ echo "$REQ_BODY" | jq -e --arg k "$KW" 'map(.content | contains($k)) | all' >/de
     && pass "Search: every hit contains keyword" \
     || fail "Search: every hit contains keyword" "$REQ_BODY"
 req GET "$BASE_URL/pastes?search=zzz-no-such-$SUFFIX&limit=100" ""
-expect_status "Search: no-match 404" 404 "$REQ_CODE" "$REQ_BODY"
-J "$REQ_BODY" '.detail' | grep -q null && fail "Search: 404 has detail" "$REQ_BODY" || pass "Search: 404 has detail"
+expect_status "Search: no-match 200" 200 "$REQ_CODE" "$REQ_BODY"
+[ "$(J "$REQ_BODY" 'length')" = "0" ] && pass "Search: no-match returns empty list" || fail "Search: no-match returns empty list" "$REQ_BODY"
 
 # ---------- 9. pagination stable pages + over-limit 422 ----------
 PG="pg${SUFFIX//-/}y"

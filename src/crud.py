@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import selectinload
-from sqlmodel import Session, col, select, update
+from sqlmodel import Session, col, delete, select, update
 from .models import Paste, Tag, User
 from .schemas.paste import PasteCreate, PasteRead, PasteUpdate
 
@@ -47,27 +47,26 @@ def _get_paste(
     if paste_id is None and name is None and tag is None:
         return None
 
-    statement = select(Paste)
+    statement = select(Paste).options(selectinload(Paste.linked_user), selectinload(Paste.linked_tags))
 
     if paste_id is not None:
         statement = statement.where(Paste.id == paste_id)
 
     if name is not None:
-        statement = statement.options(selectinload(Paste.linked_user))
         statement = statement.join(User, Paste.user_id == User.id).where(
             User.name == name
         )
 
     if tag is not None:
-        statement = statement.where(Paste.linked_tags.any(Tag.name == tag)).options(
-            selectinload(Paste.linked_tags)
-        )
+        statement = statement.where(Paste.linked_tags.any(Tag.name == tag))
 
     return session.exec(statement).all()
 
 
-def _validate_paste_list(pastes: list[Paste] | None) -> list[Paste]:
+def _validate_paste_list(pastes: list[Paste] | None, search: bool = False) -> list[Paste]:
     if pastes is None or len(pastes) == 0:
+        if search:
+            return []
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"}
         )
@@ -76,6 +75,8 @@ def _validate_paste_list(pastes: list[Paste] | None) -> list[Paste]:
         and pastes[0].expires_at is not None
         and _is_expired(pastes[0].expires_at)
     ):
+        if search:
+            return []
         raise HTTPException(
             status_code=status.HTTP_410_GONE, detail={"error": "not found"}
         )
@@ -87,7 +88,7 @@ def _validate_paste_list(pastes: list[Paste] | None) -> list[Paste]:
         ]
 
 
-def helper_func(session: Session, pastes: list[Paste], search: bool = False) -> list[PasteRead]:
+def _serialize_pastes(session: Session, pastes: list[Paste], search: bool = False) -> list[PasteRead]:
     if len(pastes) == 1 and not search:
         statement = (
             update(Paste)
@@ -118,7 +119,8 @@ def get_paste(
 ) -> list[PasteRead] | None:
     paste_db: list[Paste] = _get_paste(session, paste_id, user, tag)
     paste_db: list[Paste] = _validate_paste_list(paste_db)
-    return helper_func(session, paste_db)
+    search = False if paste_id is not None else True
+    return _serialize_pastes(session, paste_db, search=search)
 
 
 def search_pastes(
@@ -132,7 +134,7 @@ def search_pastes(
         .offset(offset)
     ).all()
     paste_db: list[Paste] = _validate_paste_list(paste_db, search=True)
-    return helper_func(session, paste_db, search=True)
+    return _serialize_pastes(session, paste_db, search=True)
 
 
 def update_paste(
@@ -180,17 +182,9 @@ def delete_paste(session: Session, paste_db: Paste) -> None:
     session.commit()
 
 
-# Not reliable for now as It only deletes the records in the Paste table, without removing the associated one in PasteTag
 def delete_expired(session: Session) -> None:
-    expired = session.exec(
-        select(Paste).where(Paste.expires_at < datetime.now(UTC))
-    ).all()
-    if expired:
-        for paste in expired:
-            paste.linked_tags.clear()
-            session.add(paste)
-            session.delete(paste)
-        session.commit()
+    session.exec(delete(Paste).where(Paste.expires_at < datetime.now(UTC)))
+    session.commit()
 
 
 def validate_paste(paste_db: Paste):
