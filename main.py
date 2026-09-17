@@ -91,9 +91,14 @@ def read_pin_filtred(
     "/pastes",
     response_model=list[PasteRead],
     dependencies=[Depends(accept_validation)],
-    status_code=status.HTTP_200_OK
+    status_code=status.HTTP_200_OK,
 )
-def search_bin(session: SessionDep, search: str, limit: int | None = Query(default=1000, ge=0, le=1000), offset: int | None = Query(default=0, ge=0)):
+def search_bin(
+    session: SessionDep,
+    search: str,
+    limit: int | None = Query(default=1000, ge=0, le=1000),
+    offset: int | None = Query(default=0, ge=0),
+):
     return search_pastes(session, search, limit, offset)
 
 

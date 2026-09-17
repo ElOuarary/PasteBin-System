@@ -2,6 +2,7 @@
 AI Generate script until creating my own
 Stabilized HTTP timing for GET /pastes?search= (warmup + 11 samples).
 """
+
 import statistics
 import time
 import urllib.request
@@ -12,13 +13,17 @@ BASE = "http://127.0.0.1:8000"
 def get(path: str, n: int = 11):
     # warmup
     for _ in range(2):
-        req = urllib.request.Request(BASE + path, headers={"Accept": "application/json"})
+        req = urllib.request.Request(
+            BASE + path, headers={"Accept": "application/json"}
+        )
         with urllib.request.urlopen(req) as r:
             r.read()
     ts = []
     size = 0
     for _ in range(n):
-        req = urllib.request.Request(BASE + path, headers={"Accept": "application/json"})
+        req = urllib.request.Request(
+            BASE + path, headers={"Accept": "application/json"}
+        )
         t = time.perf_counter()
         with urllib.request.urlopen(req) as r:
             size = len(r.read())
