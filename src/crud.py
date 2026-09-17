@@ -1,9 +1,9 @@
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
-from sqlmodel import Session, col, select, update
 from sqlalchemy.orm import selectinload
-from .models import Paste, PasteTagLink, Tag, User
+from sqlmodel import Session, col, select, update
+from .models import Paste, Tag, User
 from .schemas.paste import PasteCreate, PasteRead, PasteUpdate
 
 
@@ -53,13 +53,15 @@ def _get_paste(
         statement = statement.where(Paste.id == paste_id)
 
     if name is not None:
-        statement = (statement.options(selectinload(Paste.linked_user)))
+        statement = statement.options(selectinload(Paste.linked_user))
         statement = statement.join(User, Paste.user_id == User.id).where(
             User.name == name
         )
 
     if tag is not None:
-        statement = (statement.options(selectinload(Paste.linked_tags)))
+        statement = statement.where(Paste.linked_tags.any(Tag.name == tag)).options(
+            selectinload(Paste.linked_tags)
+        )
 
     return session.exec(statement).all()
 
@@ -69,18 +71,29 @@ def _validate_paste_list(pastes: list[Paste] | None) -> list[Paste]:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"}
         )
-    elif len(pastes) == 1 and pastes[0].expires_at is not None and _is_expired(pastes[0].expires_at):
-        raise HTTPException(status_code=status.HTTP_410_GONE, detail={"error": "not found"})
+    elif (
+        len(pastes) == 1
+        and pastes[0].expires_at is not None
+        and _is_expired(pastes[0].expires_at)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE, detail={"error": "not found"}
+        )
     else:
-        for paste in pastes:
-            if paste.expires_at is not None and _is_expired(paste.expires_at):
-                pastes.remove(paste)
-        return pastes
+        return [
+            paste
+            for paste in pastes
+            if paste.expires_at is None or not _is_expired(paste.expires_at)
+        ]
 
 
-def helper_func(session: Session, pastes: list[Paste]) -> list[PasteRead]:
-    if len(pastes) == 1:
-        statement = update(Paste).where(Paste.id == pastes[0].id).values(view_count=pastes[0].view_count + 1)
+def helper_func(session: Session, pastes: list[Paste], search: bool = False) -> list[PasteRead]:
+    if len(pastes) == 1 and not search:
+        statement = (
+            update(Paste)
+            .where(Paste.id == pastes[0].id)
+            .values(view_count=pastes[0].view_count + 1)
+        )
         session.exec(statement)
         session.commit()
         session.refresh(pastes[0])
@@ -96,6 +109,7 @@ def helper_func(session: Session, pastes: list[Paste]) -> list[PasteRead]:
 
     return pastes_read
 
+
 def get_paste(
     session: Session,
     paste_id: int | None = None,
@@ -107,16 +121,26 @@ def get_paste(
     return helper_func(session, paste_db)
 
 
-def search_pastes(session: Session, keyword: str, limit: int | None = 1000, offset: int | None = 0) -> list[PasteRead]:
-    paste_db: list[Paste] = session.exec(select(Paste).where(col(Paste.content).ilike(f"%{keyword}%")).limit(limit).offset(offset)).all()
-    paste_db: list[Paste] = _validate_paste_list(paste_db)
-    return helper_func(session, paste_db)
+def search_pastes(
+    session: Session, keyword: str, limit: int | None = 1000, offset: int | None = 0
+) -> list[PasteRead]:
+    paste_db: list[Paste] = session.exec(
+        select(Paste)
+        .options(selectinload(Paste.linked_tags), selectinload(Paste.linked_user))
+        .where(col(Paste.content).ilike(f"%{keyword}%"))
+        .limit(limit)
+        .offset(offset)
+    ).all()
+    paste_db: list[Paste] = _validate_paste_list(paste_db, search=True)
+    return helper_func(session, paste_db, search=True)
+
 
 def update_paste(
     session: Session, paste_db: Paste, paste_in: PasteUpdate
 ) -> PasteRead | None:
     paste_data = paste_in.model_dump(exclude_unset=True)
     statement = update(Paste).where(Paste.id == paste_db.id)
+    updates = {}
     for key, value in paste_data.items():
         if key == "tags":
             if value is not None:
@@ -133,11 +157,16 @@ def update_paste(
                     missing_tags = [Tag(name=name) for name in value]
                 tags = list(existing_tags) + missing_tags
                 paste_db.linked_tags = tags
-            continue
-        statement = statement.values({key: value})
-    session.exec(statement)
-    session.commit()
 
+            continue
+
+        updates[key] = value
+
+    if len(updates) > 0:
+        statement = statement.values(**updates)
+        session.exec(statement)
+
+    session.commit()
     session.refresh(paste_db)
     paste_read = PasteRead.model_validate(paste_db)
 
@@ -153,7 +182,9 @@ def delete_paste(session: Session, paste_db: Paste) -> None:
 
 # Not reliable for now as It only deletes the records in the Paste table, without removing the associated one in PasteTag
 def delete_expired(session: Session) -> None:
-    expired = session.exec(select(Paste).where(Paste.expires_at < datetime.now(UTC))).all()
+    expired = session.exec(
+        select(Paste).where(Paste.expires_at < datetime.now(UTC))
+    ).all()
     if expired:
         for paste in expired:
             paste.linked_tags.clear()

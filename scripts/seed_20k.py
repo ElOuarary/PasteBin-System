@@ -8,6 +8,7 @@ Idempotent-ish: skips work if pastes table already holds >= TARGET rows.
 
 Usage:  uv run python scripts/seed_20k.py [--total 20000] [--batch 2000]
 """
+
 import argparse
 import os
 import random
@@ -25,9 +26,26 @@ import psycopg2  # noqa: E402
 KEYWORD = "perfprobe"
 TAG_NAMES = ["python", "perf", "notes", "snippet", "q5", "draft", "log", "seed"]
 WORDS = [
-    "lorem", "ipsum", "dolor", "fastapi", "sqlmodel", "paste", "bin",
-    "server", "index", "query", "alpha", "bravo", "charlie", "delta",
-    "echo", "foxtrot", "benchmark", "sample", "text", "content",
+    "lorem",
+    "ipsum",
+    "dolor",
+    "fastapi",
+    "sqlmodel",
+    "paste",
+    "bin",
+    "server",
+    "index",
+    "query",
+    "alpha",
+    "bravo",
+    "charlie",
+    "delta",
+    "echo",
+    "foxtrot",
+    "benchmark",
+    "sample",
+    "text",
+    "content",
 ]
 
 
@@ -70,7 +88,10 @@ def main() -> None:
 
     # Ensure seed tags exist
     for name in TAG_NAMES:
-        cur.execute("INSERT INTO tags (name) VALUES (%s) ON CONFLICT (name) DO NOTHING;", (name,))
+        cur.execute(
+            "INSERT INTO tags (name) VALUES (%s) ON CONFLICT (name) DO NOTHING;",
+            (name,),
+        )
     conn.commit()
     cur.execute("SELECT id, name FROM tags;")
     tag_ids = [r[0] for r in cur.fetchall()]
@@ -94,13 +115,15 @@ def main() -> None:
             exp = now + timedelta(days=rng.randint(1, 365))
         else:
             exp = now - timedelta(days=rng.randint(1, 30))
-        batch_rows.append((
-            gen_content(n, rng),
-            now - timedelta(minutes=rng.randint(0, 525600)),
-            exp,
-            rng.randint(0, 100),
-            rng.random() < 0.1,
-        ))
+        batch_rows.append(
+            (
+                gen_content(n, rng),
+                now - timedelta(minutes=rng.randint(0, 525600)),
+                exp,
+                rng.randint(0, 100),
+                rng.random() < 0.1,
+            )
+        )
         if len(batch_rows) >= args.batch or i == need - 1:
             ids = []
             for row in batch_rows:
