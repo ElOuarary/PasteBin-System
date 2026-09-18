@@ -1,39 +1,11 @@
-from typing import Annotated
+from fastapi import APIRouter, Query, Depends, status
 
-from fastapi import APIRouter, Depends, Path, status
-
-from services.pastes import (
-    create_paste,
-    delete_expired,
-    delete_paste,
-    get_paste,
-    get_validate_paste,
-    update_paste,
-)
-from src.schemas.paste import PasteCreate, PasteRead, PasteUpdate
-from dependencies import content_type_validation, accept_validation
 from src.config.database import SessionDep
+from services.pastes import search_pastes, delete_expired
+from src.schemas.paste import PasteRead
+from dependencies import accept_validation
 
-router = APIRouter(prefix="/paste", tags=["paste"])
-
-@router.post(
-    "",
-    response_model=PasteRead,
-    dependencies=[Depends(content_type_validation), Depends(accept_validation)],
-    status_code=status.HTTP_201_CREATED,
-)
-def write_pin(paste_in: PasteCreate, session: SessionDep):
-    return create_paste(session, paste_in)
-
-@router.get(
-    "/{paste_id}",
-    response_model=list[PasteRead],
-    dependencies=[Depends(accept_validation)],
-    status_code=status.HTTP_200_OK,
-)
-def read_pin(paste_id: Annotated[int, Path(ge=0)], session: SessionDep):
-    return get_paste(session, paste_id)
-
+router = APIRouter(prefix="/pastes", tags=["pastes"])
 
 @router.get(
     "",
@@ -41,27 +13,14 @@ def read_pin(paste_id: Annotated[int, Path(ge=0)], session: SessionDep):
     dependencies=[Depends(accept_validation)],
     status_code=status.HTTP_200_OK,
 )
-def read_pin_filtred(
+def search_bin(
     session: SessionDep,
-    paste_id: int | None = None,
-    user: str | None = None,
-    tag: str | None = None,
+    search: str,
+    limit: int | None = Query(default=1000, ge=0, le=1000),
+    offset: int | None = Query(default=0, ge=0),
 ):
-    return get_paste(session, paste_id, user, tag)
+    return search_pastes(session, search, limit, offset)
 
-
-@router.put(
-    "/{paste_id}",
-    response_model=PasteRead,
-    dependencies=[Depends(content_type_validation), Depends(accept_validation)],
-    status_code=status.HTTP_202_ACCEPTED,
-)
-def update_bin(paste_id: int, paste_in: PasteUpdate, session: SessionDep):
-    paste_db = get_validate_paste(session, paste_id)
-    return update_paste(session, paste_db, paste_in)
-
-
-@router.delete("/{paste_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_bin(paste_id: int, session: SessionDep):
-    paste_db = get_validate_paste(session, paste_id)
-    delete_paste(session, paste_db)
+@router.delete("/expired", status_code=status.HTTP_204_NO_CONTENT)
+def delete_expired_bin(session: SessionDep):
+    delete_expired(session)
