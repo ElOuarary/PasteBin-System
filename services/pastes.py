@@ -3,8 +3,8 @@ from datetime import UTC, datetime
 from fastapi import HTTPException, status
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, delete, select, update
-from .models import Paste, Tag, User
-from .schemas.paste import PasteCreate, PasteRead, PasteUpdate
+from src.models import Paste, Tag, User
+from src.schemas.paste import PasteCreate, PasteRead, PasteUpdate
 
 
 def _is_expired(expires_at: datetime) -> bool:
