@@ -1,3 +1,5 @@
+import uuid
+
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
@@ -10,9 +12,10 @@ if TYPE_CHECKING:
 class User(SQLModel, table=True):
     __tablename__ = "users"
 
-    id: int | None = Field(primary_key=True)
-    name: str = Field(index=True)
+    id: int = Field(primary_key=True)
+    username: str = Field(index=True)
     email: str
+    hashed_password: str
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), index=True),

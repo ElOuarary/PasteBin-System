@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import UUID
 
 from sqlmodel import Field, SQLModel
 
@@ -11,7 +12,7 @@ class PasteCreate(SQLModel):
 
 
 class PasteRead(SQLModel):
-    id: int
+    id: UUID
     content: str
     user: str | None = None
     created_at: datetime
@@ -22,7 +23,7 @@ class PasteRead(SQLModel):
 
 
 class PasteQuery(SQLModel):
-    paste_id: int | None = Field(default=None, ge=0)
+    paste_id: UUID | None = None
     user: str | None = None
     tag: str | None = None
 
