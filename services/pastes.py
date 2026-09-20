@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from fastapi import HTTPException, status
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, delete, select, update
+
 from src.models import Paste, Tag, User
 from src.schemas.paste import PasteCreate, PasteRead, PasteUpdate
 
@@ -11,9 +12,11 @@ def _is_expired(expires_at: datetime) -> bool:
     return expires_at < datetime.now(UTC)
 
 
-def create_paste(session: Session, paste_in: PasteCreate) -> PasteRead:
+def create_paste(session: Session, paste_in: PasteCreate, user: User) -> PasteRead:
     paste_data = paste_in.model_dump(exclude={"tags"})
     paste = Paste(**paste_data)
+    paste.user_id = user.id
+    paste.linked_user = user
 
     if paste_in.tags:
         statement = select(Tag).where(Tag.name.in_(paste_in.tags))
@@ -41,20 +44,22 @@ def create_paste(session: Session, paste_in: PasteCreate) -> PasteRead:
 def _get_paste(
     session: Session,
     paste_id: int | None = None,
-    name: str | None = None,
+    username: str | None = None,
     tag: str | None = None,
 ) -> list[Paste]:
-    if paste_id is None and name is None and tag is None:
+    if paste_id is None and username is None and tag is None:
         return None
 
-    statement = select(Paste).options(selectinload(Paste.linked_user), selectinload(Paste.linked_tags))
+    statement = select(Paste).options(
+        selectinload(Paste.linked_user), selectinload(Paste.linked_tags)
+    )
 
     if paste_id is not None:
         statement = statement.where(Paste.id == paste_id)
 
-    if name is not None:
+    if username is not None:
         statement = statement.join(User, Paste.user_id == User.id).where(
-            User.name == name
+            User.username == username
         )
 
     if tag is not None:
@@ -63,7 +68,9 @@ def _get_paste(
     return session.exec(statement).all()
 
 
-def _validate_paste_list(pastes: list[Paste] | None, search: bool = False) -> list[Paste]:
+def _validate_paste_list(
+    pastes: list[Paste] | None, user: User, search: bool = False
+) -> list[Paste]:
     if pastes is None or len(pastes) == 0:
         if search:
             return []
@@ -78,17 +85,21 @@ def _validate_paste_list(pastes: list[Paste] | None, search: bool = False) -> li
         if search:
             return []
         raise HTTPException(
-            status_code=status.HTTP_410_GONE, detail={"error": "not found"}
+            status_code=status.HTTP_410_GONE,
+            detail={"error": "content no longer available"},
         )
     else:
         return [
             paste
             for paste in pastes
-            if paste.expires_at is None or not _is_expired(paste.expires_at)
+            if (not paste.is_private or paste.user_id == user.id)
+            and (paste.expires_at is None or not _is_expired(paste.expires_at))
         ]
 
 
-def _serialize_pastes(session: Session, pastes: list[Paste], search: bool = False) -> list[PasteRead]:
+def _serialize_pastes(
+    session: Session, pastes: list[Paste], search: bool = False
+) -> list[PasteRead]:
     if len(pastes) == 1 and not search:
         statement = (
             update(Paste)
@@ -113,18 +124,23 @@ def _serialize_pastes(session: Session, pastes: list[Paste], search: bool = Fals
 
 def get_paste(
     session: Session,
+    user: User,
     paste_id: int | None = None,
-    user: str | None = None,
+    username: str | None = None,
     tag: str | None = None,
 ) -> list[PasteRead] | None:
-    paste_db: list[Paste] = _get_paste(session, paste_id, user, tag)
-    paste_db: list[Paste] = _validate_paste_list(paste_db)
+    paste_db: list[Paste] = _get_paste(session, paste_id, username, tag)
+    paste_db: list[Paste] = _validate_paste_list(paste_db, user)
     search = False if paste_id is not None else True
     return _serialize_pastes(session, paste_db, search=search)
 
 
 def search_pastes(
-    session: Session, keyword: str, limit: int | None = 1000, offset: int | None = 0
+    session: Session,
+    user: User,
+    keyword: str,
+    limit: int | None = 1000,
+    offset: int | None = 0,
 ) -> list[PasteRead]:
     paste_db: list[Paste] = session.exec(
         select(Paste)
@@ -133,7 +149,7 @@ def search_pastes(
         .limit(limit)
         .offset(offset)
     ).all()
-    paste_db: list[Paste] = _validate_paste_list(paste_db, search=True)
+    paste_db: list[Paste] = _validate_paste_list(paste_db, user, search=True)
     return _serialize_pastes(session, paste_db, search=True)
 
 
@@ -187,7 +203,7 @@ def delete_expired(session: Session) -> None:
     session.commit()
 
 
-def validate_paste(paste_db: Paste):
+def validate_paste(paste_db: Paste, user: User):
     if paste_db is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail={"error": "not found"}
@@ -197,9 +213,14 @@ def validate_paste(paste_db: Paste):
             status_code=status.HTTP_410_GONE,
             detail={"error": "content no longer available"},
         )
+    elif paste_db.is_private and paste_db.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"error": "can't access this resource"},
+        )
 
 
-def get_validate_paste(session: Session, paste_id: int):
+def get_validate_paste(session: Session, paste_id: int, user: User):
     paste_db = session.get(Paste, paste_id)
-    validate_paste(paste_db)
+    validate_paste(paste_db, user)
     return paste_db

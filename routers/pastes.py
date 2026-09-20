@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Query, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
-from src.config.database import SessionDep
-from services.pastes import search_pastes, delete_expired
-from src.schemas.paste import PasteRead
+from auth import CurrentUser
 from dependencies import accept_validation
+from services.pastes import delete_expired, search_pastes
+from src.config.database import SessionDep
+from src.schemas.paste import PasteRead
 
 router = APIRouter(prefix="/pastes", tags=["pastes"])
+
 
 @router.get(
     "",
@@ -15,11 +17,13 @@ router = APIRouter(prefix="/pastes", tags=["pastes"])
 )
 def search_bin(
     session: SessionDep,
+    user: CurrentUser,
     search: str,
     limit: int | None = Query(default=1000, ge=0, le=1000),
     offset: int | None = Query(default=0, ge=0),
 ):
-    return search_pastes(session, search, limit, offset)
+    return search_pastes(session, user, search, limit, offset)
+
 
 @router.delete("/expired", status_code=status.HTTP_204_NO_CONTENT)
 def delete_expired_bin(session: SessionDep):
