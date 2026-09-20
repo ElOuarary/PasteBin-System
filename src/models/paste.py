@@ -1,3 +1,5 @@
+import uuid
+
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
@@ -13,7 +15,7 @@ if TYPE_CHECKING:
 class Paste(SQLModel, table=True):
     __tablename__ = "pastes"
 
-    id: int | None = Field(default=None, primary_key=True)
+    id: int = Field(primary_key=True)
     user_id: int | None = Field(default=None, foreign_key="users.id")
     content: str = Field(nullable=False, min_length=1, max_length=10_000_000)
     created_at: datetime = Field(
