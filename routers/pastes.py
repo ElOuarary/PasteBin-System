@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, status
 
-from auth import CurrentUser
+from src.auth import CurrentUser
 from dependencies import accept_validation
 from services.pastes import delete_expired, search_pastes
 from src.config.database import SessionDep

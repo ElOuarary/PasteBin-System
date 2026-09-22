@@ -1,8 +1,10 @@
+import os
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 import jwt
+from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
@@ -11,10 +13,13 @@ from pydantic import BaseModel
 from src.config.database import SessionDep
 from src.models import User
 
-SECRET_KEY = "a1606a690dfc05a18f8165f41200d26ff23925ce78b61628bfa6bdf60f1e5a88"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 15
+load_dotenv()
 
+SECRET_KEY = os.environ.get("SECRET_KEY")
+ALGORITHM = os.environ.get("ALGORITHM")
+ACCESS_TOKEN_EXPIRE_MINUTES = os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES")
+
+oauth2_schema = OAuth2PasswordBearer("login")
 
 class Token(BaseModel):
     access_token: str
@@ -32,7 +37,7 @@ def create_access_token(id: int):
     return jwt.encode(payload=payload, key=SECRET_KEY, algorithm=ALGORITHM)
 
 
-def get_payload(token: str = Depends(OAuth2PasswordBearer)) -> dict:
+def get_payload(token: str = Depends(oauth2_schema)) -> dict:
     try:
         payload = jwt.decode(token, key=SECRET_KEY, algorithms=[ALGORITHM])
     except InvalidTokenError:

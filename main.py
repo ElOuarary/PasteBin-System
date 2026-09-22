@@ -11,8 +11,6 @@ from src.schemas.user import UserRegistryForm
 
 password_hash = PasswordHash.recommended()
 
-oauth2_schema = OAuth2PasswordBearer("login")
-
 
 app = FastAPI()
 app.include_router(paste.router)
