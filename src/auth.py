@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from src.config.database import SessionDep
 from src.models import User
+from src.schemas.role import Role
 
 load_dotenv()
 
@@ -26,7 +27,7 @@ class Token(BaseModel):
     token_type: str
 
 
-def create_access_token(id: int):
+def create_access_token(id: int) -> str:
     now = datetime.now(UTC)
     payload = {
         "sub": id,
@@ -49,7 +50,7 @@ def get_payload(token: str = Depends(oauth2_schema)) -> dict:
     return payload
 
 
-def get_user_id(session: SessionDep, payload: dict = Depends(get_payload)):
+def get_user(session: SessionDep, payload: dict = Depends(get_payload)) -> User:
     user_id = payload.get("sub", None)
     if user_id is None:
         raise HTTPException(
@@ -62,5 +63,11 @@ def get_user_id(session: SessionDep, payload: dict = Depends(get_payload)):
         )
     return user
 
+def role_required(required_roles: list[Role]):
+    def wrapper(user: User = Depends(get_user)):
+        if user.role not in required_roles:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"error": ""})
+        return user
+    return wrapper
 
-CurrentUser = Annotated[User, Depends(get_user_id)]
+CurrentUser = Annotated[User, Depends(get_user)]

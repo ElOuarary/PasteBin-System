@@ -127,7 +127,7 @@ def get_paste(
 ) -> list[PasteRead] | None:
     if paste_id is not None:
         paste_db: Paste = get_validate_paste(session, paste_id, user)
-        return [paste_db]
+        return _serialize_pastes(session, [paste_db])
     else:
         paste_db: list[Paste] = _get_paste(session, username, tag)
         paste_db: list[Paste] = _validate_paste_list(paste_db, user)

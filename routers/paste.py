@@ -10,8 +10,9 @@ from services.pastes import (
     get_validate_paste,
     update_paste,
 )
-from src.auth import CurrentUser
+from src.auth import CurrentUser, role_required
 from src.config.database import SessionDep
+from src.models import User
 from src.schemas.paste import PasteCreate, PasteRead, PasteUpdate
 
 router = APIRouter(prefix="/paste", tags=["paste"])
@@ -23,7 +24,7 @@ router = APIRouter(prefix="/paste", tags=["paste"])
     dependencies=[Depends(content_type_validation), Depends(accept_validation)],
     status_code=status.HTTP_201_CREATED,
 )
-def write_pin(paste_in: PasteCreate, session: SessionDep, user: CurrentUser):
+def write_pin(paste_in: PasteCreate, session: SessionDep, user: User = Depends(role_required(["admin", "user"]))):
     return create_paste(session, paste_in, user)
 
 
@@ -34,7 +35,7 @@ def write_pin(paste_in: PasteCreate, session: SessionDep, user: CurrentUser):
     status_code=status.HTTP_200_OK,
 )
 def read_pin(
-    paste_id: Annotated[int, Path(ge=0)], session: SessionDep, user: CurrentUser
+    paste_id: Annotated[int, Path(ge=0)], session: SessionDep, user: User = Depends(role_required(["admin", "user"]))
 ):
     return get_paste(session, paste_id, user)
 
@@ -47,7 +48,7 @@ def read_pin(
 )
 def read_pin_filtred(
     session: SessionDep,
-    user: CurrentUser,
+    user: User = Depends(role_required(["admin", "user"])),
     paste_id: int | None = None,
     username: str | None = None,
     tag: str | None = None,
@@ -62,13 +63,13 @@ def read_pin_filtred(
     status_code=status.HTTP_202_ACCEPTED,
 )
 def update_bin(
-    paste_id: int, paste_in: PasteUpdate, session: SessionDep, user: CurrentUser
+    paste_id: int, paste_in: PasteUpdate, session: SessionDep, user: User = Depends(role_required(["admin", "user"]))
 ):
     paste_db = get_validate_paste(session, paste_id, user)
     return update_paste(session, paste_db, paste_in)
 
 
 @router.delete("/{paste_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_bin(paste_id: int, session: SessionDep, user: CurrentUser):
+def delete_bin(paste_id: int, session: SessionDep, user: User = Depends(role_required(["admin", "user"]))):
     paste_db = get_validate_paste(session, paste_id, user)
     delete_paste(session, paste_db)
