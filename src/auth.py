@@ -32,7 +32,7 @@ def create_access_token(id: int):
         "sub": id,
         "jti": str(uuid.uuid4()),
         "iat": now,
-        "exp": now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        "exp": now + timedelta(minutes=int(ACCESS_TOKEN_EXPIRE_MINUTES)),
     }
     return jwt.encode(payload=payload, key=SECRET_KEY, algorithm=ALGORITHM)
 

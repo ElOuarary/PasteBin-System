@@ -43,19 +43,15 @@ def create_paste(session: Session, paste_in: PasteCreate, user: User) -> PasteRe
 
 def _get_paste(
     session: Session,
-    paste_id: int | None = None,
     username: str | None = None,
     tag: str | None = None,
 ) -> list[Paste]:
-    if paste_id is None and username is None and tag is None:
+    if username is None and tag is None:
         return None
 
     statement = select(Paste).options(
         selectinload(Paste.linked_user), selectinload(Paste.linked_tags)
     )
-
-    if paste_id is not None:
-        statement = statement.where(Paste.id == paste_id)
 
     if username is not None:
         statement = statement.join(User, Paste.user_id == User.id).where(
@@ -129,10 +125,14 @@ def get_paste(
     username: str | None = None,
     tag: str | None = None,
 ) -> list[PasteRead] | None:
-    paste_db: list[Paste] = _get_paste(session, paste_id, username, tag)
-    paste_db: list[Paste] = _validate_paste_list(paste_db, user)
-    search = False if paste_id is not None else True
-    return _serialize_pastes(session, paste_db, search=search)
+    if paste_id is not None:
+        paste_db: Paste = get_validate_paste(session, paste_id, user)
+        return [paste_db]
+    else:
+        paste_db: list[Paste] = _get_paste(session, username, tag)
+        paste_db: list[Paste] = _validate_paste_list(paste_db, user)
+        search = False if paste_id is not None else True
+        return _serialize_pastes(session, paste_db, search=search)
 
 
 def search_pastes(
