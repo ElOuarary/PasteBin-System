@@ -15,7 +15,7 @@ class User(SQLModel, table=True):
     username: str = Field(index=True)
     email: str
     hashed_password: str
-    role: Enum
+    role: str = None
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), index=True),

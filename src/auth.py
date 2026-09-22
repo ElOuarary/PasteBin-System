@@ -27,10 +27,11 @@ class Token(BaseModel):
     token_type: str
 
 
-def create_access_token(id: int) -> str:
+def create_access_token(id: int, role: str) -> str:
     now = datetime.now(UTC)
     payload = {
         "sub": id,
+        "role": role,
         "jti": str(uuid.uuid4()),
         "iat": now,
         "exp": now + timedelta(minutes=int(ACCESS_TOKEN_EXPIRE_MINUTES)),
@@ -66,7 +67,7 @@ def get_user(session: SessionDep, payload: dict = Depends(get_payload)) -> User:
 def role_required(required_roles: list[Role]):
     def wrapper(user: User = Depends(get_user)):
         if user.role not in required_roles:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"error": ""})
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"error": f"Access denied for role {user.role}"})
         return user
     return wrapper
 

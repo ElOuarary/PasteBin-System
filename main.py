@@ -7,6 +7,7 @@ from routers import paste, pastes
 from src.auth import Token, create_access_token
 from src.config.database import SessionDep
 from src.models.user import User
+from src.schemas.role import Role
 from src.schemas.user import UserRegistryForm
 
 password_hash = PasswordHash.recommended()
@@ -38,6 +39,7 @@ def register(registry_form: UserRegistryForm, session: SessionDep):
         username=registry_form.username,
         email=registry_form.email,
         hashed_password=hashed_password,
+        role=Role.USER
     )
     session.add(user)
     session.commit()
@@ -59,4 +61,4 @@ def login(session: SessionDep, login_form: OAuth2PasswordRequestForm = Depends()
             detail="Username or passowrd is invalid",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return {"access_token": create_access_token(user.id), "token_type": "Bearer"}
+    return {"access_token": create_access_token(user.id, user.role), "token_type": "Bearer"}
