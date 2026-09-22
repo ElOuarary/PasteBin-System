@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import Header, HTTPException, status
 
+
 def content_type_validation(
     content_type: Annotated[str, Header()] = "application/json",
 ):

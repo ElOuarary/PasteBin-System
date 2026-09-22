@@ -1,43 +1,74 @@
+import os
 import uuid
-from datetime import datetime, UTC, timedelta
+from datetime import UTC, datetime, timedelta
+from typing import Annotated
 
 import jwt
-
-from fastapi import HTTPException, Depends, status 
+from dotenv import load_dotenv
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pydantic import BaseModel
 
-SECRET_KEY = "a1606a690dfc05a18f8165f41200d26ff23925ce78b61628bfa6bdf60f1e5a88"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 15
+from src.config.database import SessionDep
+from src.models import User
+from src.schemas.role import Role
+
+load_dotenv()
+
+SECRET_KEY = os.environ.get("SECRET_KEY")
+ALGORITHM = os.environ.get("ALGORITHM")
+ACCESS_TOKEN_EXPIRE_MINUTES = os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES")
+
+oauth2_schema = OAuth2PasswordBearer("login")
 
 class Token(BaseModel):
     access_token: str
     token_type: str
 
-def create_access_token(id: int):
+
+def create_access_token(id: int, role: str) -> str:
     now = datetime.now(UTC)
     payload = {
         "sub": id,
+        "role": role,
         "jti": str(uuid.uuid4()),
         "iat": now,
-        "exp": now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        "exp": now + timedelta(minutes=int(ACCESS_TOKEN_EXPIRE_MINUTES)),
     }
     return jwt.encode(payload=payload, key=SECRET_KEY, algorithm=ALGORITHM)
 
 
-def get_payload(token: str = Depends(OAuth2PasswordBearer)) -> dict:
+def get_payload(token: str = Depends(oauth2_schema)) -> dict:
     try:
         payload = jwt.decode(token, key=SECRET_KEY, algorithms=[ALGORITHM])
     except InvalidTokenError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token", headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return payload
 
-def get_user_id(payload: dict = Depends(get_payload)):
+
+def get_user(session: SessionDep, payload: dict = Depends(get_payload)) -> User:
     user_id = payload.get("sub", None)
     if user_id is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-    return user_id
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+        )
+    user = session.get(User, user_id)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+        )
+    return user
 
-UserDep: int = Depends(get_user_id)
+def role_required(required_roles: list[Role]):
+    def wrapper(user: User = Depends(get_user)):
+        if user.role not in required_roles:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"error": f"Access denied for role {user.role}"})
+        return user
+    return wrapper
+
+CurrentUser = Annotated[User, Depends(get_user)]

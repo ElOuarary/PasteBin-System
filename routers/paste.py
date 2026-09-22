@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, status
 
+from dependencies import accept_validation, content_type_validation
 from services.pastes import (
     create_paste,
     delete_paste,
@@ -9,11 +10,13 @@ from services.pastes import (
     get_validate_paste,
     update_paste,
 )
-from src.schemas.paste import PasteCreate, PasteRead, PasteUpdate
-from dependencies import content_type_validation, accept_validation
+from src.auth import CurrentUser, role_required
 from src.config.database import SessionDep
+from src.models import User
+from src.schemas.paste import PasteCreate, PasteRead, PasteUpdate
 
 router = APIRouter(prefix="/paste", tags=["paste"])
+
 
 @router.post(
     "",
@@ -21,8 +24,9 @@ router = APIRouter(prefix="/paste", tags=["paste"])
     dependencies=[Depends(content_type_validation), Depends(accept_validation)],
     status_code=status.HTTP_201_CREATED,
 )
-def write_pin(paste_in: PasteCreate, session: SessionDep):
-    return create_paste(session, paste_in)
+def write_pin(paste_in: PasteCreate, session: SessionDep, user: User = Depends(role_required(["admin", "user"]))):
+    return create_paste(session, paste_in, user)
+
 
 @router.get(
     "/{paste_id}",
@@ -30,8 +34,10 @@ def write_pin(paste_in: PasteCreate, session: SessionDep):
     dependencies=[Depends(accept_validation)],
     status_code=status.HTTP_200_OK,
 )
-def read_pin(paste_id: Annotated[int, Path(ge=0)], session: SessionDep):
-    return get_paste(session, paste_id)
+def read_pin(
+    paste_id: Annotated[int, Path(ge=0)], session: SessionDep, user: User = Depends(role_required(["admin", "user"]))
+):
+    return get_paste(session, paste_id, user)
 
 
 @router.get(
@@ -42,11 +48,12 @@ def read_pin(paste_id: Annotated[int, Path(ge=0)], session: SessionDep):
 )
 def read_pin_filtred(
     session: SessionDep,
+    user: User = Depends(role_required(["admin", "user"])),
     paste_id: int | None = None,
-    user: str | None = None,
+    username: str | None = None,
     tag: str | None = None,
 ):
-    return get_paste(session, paste_id, user, tag)
+    return get_paste(session, user, paste_id, username, tag)
 
 
 @router.put(
@@ -55,12 +62,14 @@ def read_pin_filtred(
     dependencies=[Depends(content_type_validation), Depends(accept_validation)],
     status_code=status.HTTP_202_ACCEPTED,
 )
-def update_bin(paste_id: int, paste_in: PasteUpdate, session: SessionDep):
-    paste_db = get_validate_paste(session, paste_id)
+def update_bin(
+    paste_id: int, paste_in: PasteUpdate, session: SessionDep, user: User = Depends(role_required(["admin", "user"]))
+):
+    paste_db = get_validate_paste(session, paste_id, user)
     return update_paste(session, paste_db, paste_in)
 
 
 @router.delete("/{paste_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_bin(paste_id: int, session: SessionDep):
-    paste_db = get_validate_paste(session, paste_id)
+def delete_bin(paste_id: int, session: SessionDep, user: User = Depends(role_required(["admin", "user"]))):
+    paste_db = get_validate_paste(session, paste_id, user)
     delete_paste(session, paste_db)

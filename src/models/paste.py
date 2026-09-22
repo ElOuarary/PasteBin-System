@@ -1,5 +1,4 @@
 import uuid
-
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
@@ -26,7 +25,7 @@ class Paste(SQLModel, table=True):
         default=None, sa_column=Column(DateTime(timezone=True), index=True)
     )
     view_count: int = Field(default=0)
-    is_private: bool | None = Field(default=False)
+    is_private: bool = Field(default=False)
 
     linked_user: User = Relationship(back_populates="linked_pastes")
     linked_tags: list["Tag"] = Relationship(

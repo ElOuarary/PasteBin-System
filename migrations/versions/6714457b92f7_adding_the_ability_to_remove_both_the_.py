@@ -5,16 +5,16 @@ Revises: fc9e778243f5
 Create Date: 2026-09-17 20:06:54.229599
 
 """
+
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 import sqlmodel
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = '6714457b92f7'
-down_revision: Union[str, Sequence[str], None] = 'fc9e778243f5'
+revision: str = "6714457b92f7"
+down_revision: Union[str, Sequence[str], None] = "fc9e778243f5"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
