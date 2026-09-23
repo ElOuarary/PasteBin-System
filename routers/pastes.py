@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, Query, status
 
-from src.security import role_required
 from dependencies import accept_validation
 from services.pastes import delete_expired, search_pastes
 from src.config.database import SessionDep
 from src.models import User
+from src.security import role_required
 from src.schemas.paste import PasteRead
 
 router = APIRouter(prefix="/pastes", tags=["pastes"])

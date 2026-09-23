@@ -17,9 +17,12 @@ def register(registry_form: UserRegistryForm, session: SessionDep):
     user: User = session.exec(
         select(User).where(User.username == registry_form.username)
     ).first()
-    if user is not None:
+    user_email: User = session.exec(
+        select(User).where(User.email == registry_form.email)
+    ).first()
+    if user is not None or user_email is not None:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Username is already taken"
+            status_code=status.HTTP_409_CONFLICT, detail= "Username or email is already taken"
         )
 
     hashed_password: str = password_hash.hash(registry_form.password)
