@@ -38,7 +38,7 @@ def register(registry_form: UserRegistryForm, session: SessionDep):
     return {"id": user.id, "username": user.username}
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=Token, status_code=status.HTTP_201_CREATED)
 def login(session: SessionDep, login_form: OAuth2PasswordRequestForm = Depends()):
     user = session.exec(
         select(User).where(User.username == login_form.username)
@@ -49,7 +49,7 @@ def login(session: SessionDep, login_form: OAuth2PasswordRequestForm = Depends()
         # we can run seperate condition by first checking the existing of the username if it does not exists, we verify the hash to prevent time attacking
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Username or passowrd is invalid",
+            detail="Username or password is invalid",
             headers={"WWW-Authenticate": "Bearer"},
         )
     return {"access_token": create_access_token(user.id, user.role), "token_type": "Bearer"}
