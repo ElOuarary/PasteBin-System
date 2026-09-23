@@ -20,9 +20,12 @@ def generate_test_paste(
     tag_length: int = 6,
     is_private: bool = False,
 ) -> dict:
-    content = ''.join(random.choices(string.ascii_letters + string.digits + " ", k=content_length))
+    if content_length == 0:
+        content = ""
+    else:
+        content = ''.join(random.choices(string.ascii_letters + string.digits + " ", k=content_length))
     return {
-        "content": content.strip() or "sample paste content",
+        "content": content.strip(),
         "is_private": is_private,
         "tags": generate_tags(tag_count, tag_length),
     }
