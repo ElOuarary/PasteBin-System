@@ -25,7 +25,7 @@ def test_register_duplicate_username_email():
     assert response.json() == {"detail": "Username or email is already taken"}
 
     
-def test_register_dupliacte_email():
+def test_register_duplicate_email():
     test_user = generate_test_user()
     
     response = client.post("/auth/register", json=test_user)
@@ -43,6 +43,7 @@ def test_login():
     test_user = generate_test_user()
     user_creation = client.post("/auth/register", json=test_user)
     assert user_creation.status_code == 201
+
     response = client.post("/auth/login", data=test_user)
     assert response.status_code == 201
     assert "access_token" in response.json()
@@ -57,7 +58,7 @@ def test_login_with_wrong_username():
     response = client.post("/auth/login", data=test_user)
     assert response.status_code == 401
     assert response.json() == {"detail": "Username or password is invalid"}
-    assert "WWW-Authenticate".lower() in response.headers.keys() and response.headers["WWW-Authenticate"] == "Bearer"
+    assert "WWW-Authenticate".lower() in response.headers.keys() and response.headers["www-authenticate"] == "Bearer"
 
 def test_login_with_wrong_password():
     test_user = generate_test_user()
@@ -68,5 +69,5 @@ def test_login_with_wrong_password():
     response = client.post("/auth/login", data=test_user)
     assert response.status_code == 401
     assert response.json() == {"detail": "Username or password is invalid"}
-    assert "WWW-Authenticate".lower() in response.headers.keys() and response.headers["WWW-Authenticate"] == "Bearer"
+    assert "WWW-Authenticate".lower() in response.headers.keys() and response.headers["www-authenticate"] == "Bearer"
     

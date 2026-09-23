@@ -14,7 +14,7 @@ from src.security import role_required
 from src.config.database import SessionDep
 from src.models import User
 from src.schemas.paste import PasteCreate, PasteRead, PasteUpdate
-
+create_paste
 router = APIRouter(prefix="/paste", tags=["paste"])
 
 
