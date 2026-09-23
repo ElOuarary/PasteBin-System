@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, status
 
-from src.auth import role_required
+from src.security import role_required
 from dependencies import accept_validation
 from services.pastes import delete_expired, search_pastes
 from src.config.database import SessionDep
