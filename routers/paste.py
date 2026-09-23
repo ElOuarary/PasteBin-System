@@ -37,7 +37,7 @@ def write_pin(paste_in: PasteCreate, session: SessionDep, user: User = Depends(r
 def read_pin(
     paste_id: Annotated[int, Path(ge=0)], session: SessionDep, user: User = Depends(role_required(["admin", "user"]))
 ):
-    return get_paste(session, paste_id, user)
+    return get_paste(session, user, paste_id)
 
 
 @router.get(

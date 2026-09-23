@@ -1,18 +1,14 @@
-from fastapi.testclient import TestClient
-
-from main import app
 from utils.generate_user import generate_test_user, generate_username, generate_password
 
-client = TestClient(app)
 
-def test_register():
+def test_register(client):
     test_user = generate_test_user()
     response = client.post("/auth/register", json=test_user)
     assert response.status_code == 201
     assert "id" in response.json() and "username" in response.json()
     assert response.json()["username"] == test_user["username"]
 
-def test_register_duplicate_username_email():
+def test_register_duplicate_username_email(client):
     test_user = generate_test_user()
 
     response = client.post("/auth/register", json=test_user)
@@ -25,7 +21,7 @@ def test_register_duplicate_username_email():
     assert response.json() == {"detail": "Username or email is already taken"}
 
     
-def test_register_duplicate_email():
+def test_register_duplicate_email(client):
     test_user = generate_test_user()
     
     response = client.post("/auth/register", json=test_user)
@@ -39,7 +35,7 @@ def test_register_duplicate_email():
     assert response.json() == {"detail": "Username or email is already taken"}
 
 
-def test_login():
+def test_login(client):
     test_user = generate_test_user()
     user_creation = client.post("/auth/register", json=test_user)
     assert user_creation.status_code == 201
@@ -49,7 +45,7 @@ def test_login():
     assert "access_token" in response.json()
     assert "token_type" in response.json() and response.json()["token_type"] == "Bearer"
 
-def test_login_with_wrong_username():
+def test_login_with_wrong_username(client):
     test_user = generate_test_user()
     user_creation = client.post("/auth/register", json=test_user)
     assert user_creation.status_code == 201
@@ -60,7 +56,7 @@ def test_login_with_wrong_username():
     assert response.json() == {"detail": "Username or password is invalid"}
     assert "WWW-Authenticate".lower() in response.headers.keys() and response.headers["www-authenticate"] == "Bearer"
 
-def test_login_with_wrong_password():
+def test_login_with_wrong_password(client):
     test_user = generate_test_user()
     user_creation = client.post("/auth/register", json=test_user)
     assert user_creation.status_code == 201

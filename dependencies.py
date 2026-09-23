@@ -15,8 +15,8 @@ def content_type_validation(
         )
 
 
-def accept_validation(accept: Annotated[str | None, Header()] = "application/json"):
-    if accept.lower() not in ("application/json"):
+def accept_validation(accept: Annotated[str, Header()] = "application/json"):
+    if accept.lower() not in ("*/*", "application/json"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="application/json is only supported value for the Accept",
