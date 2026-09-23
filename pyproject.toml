@@ -9,6 +9,7 @@ dependencies = [
     "build>=1.5.0",
     "coverage>=7.14.1",
     "fastapi[standard]>=0.136.3",
+    "httpx2>=2.13.1",
     "psycopg2-binary>=2.9.12",
     "pwdlib[argon2]>=0.3.1",
     "pyjwt>=2.14.0",
@@ -18,5 +19,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "pytest>=9.0.3",
     "ruff>=0.16.0",
 ]

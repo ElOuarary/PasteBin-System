@@ -12,9 +12,9 @@ class PasteCreate(SQLModel):
 
 
 class PasteRead(SQLModel):
-    id: UUID
+    id: int
     content: str
-    user: str | None = None
+    username: str | None = None
     created_at: datetime
     expires_at: datetime | None = None
     view_count: int
@@ -23,8 +23,8 @@ class PasteRead(SQLModel):
 
 
 class PasteQuery(SQLModel):
-    paste_id: UUID | None = None
-    user: str | None = None
+    paste_id: int | None = None
+    username: str | None = None
     tag: str | None = None
 
 

@@ -20,7 +20,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 ALGORITHM = os.environ.get("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES")
 
-oauth2_schema = OAuth2PasswordBearer("login")
+oauth2_schema = OAuth2PasswordBearer("auth/login")
 
 class Token(BaseModel):
     access_token: str
@@ -30,7 +30,7 @@ class Token(BaseModel):
 def create_access_token(id: int, role: str) -> str:
     now = datetime.now(UTC)
     payload = {
-        "sub": id,
+        "sub": str(id),
         "role": role,
         "jti": str(uuid.uuid4()),
         "iat": now,
@@ -57,6 +57,7 @@ def get_user(session: SessionDep, payload: dict = Depends(get_payload)) -> User:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
+    user_id = int(user_id)
     user = session.get(User, user_id)
     if user is None:
         raise HTTPException(

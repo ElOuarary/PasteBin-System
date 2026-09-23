@@ -10,11 +10,11 @@ from services.pastes import (
     get_validate_paste,
     update_paste,
 )
-from src.auth import CurrentUser, role_required
+from src.security import role_required
 from src.config.database import SessionDep
 from src.models import User
 from src.schemas.paste import PasteCreate, PasteRead, PasteUpdate
-
+create_paste
 router = APIRouter(prefix="/paste", tags=["paste"])
 
 
