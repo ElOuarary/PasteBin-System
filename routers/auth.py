@@ -1,16 +1,17 @@
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlmodel import select
 from pwdlib import PasswordHash
+from sqlmodel import select
 
-from src.security import Token, create_access_token
 from src.config.database import SessionDep
 from src.models import User
 from src.schemas.user import UserRegistryForm
+from src.security import Token, create_access_token, oauth2_schema, revoked_token
 
 password_hash = PasswordHash.recommended()
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(registry_form: UserRegistryForm, session: SessionDep):
@@ -22,7 +23,8 @@ def register(registry_form: UserRegistryForm, session: SessionDep):
     ).first()
     if user is not None or user_email is not None:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail= "Username or email is already taken"
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username or email is already taken",
         )
 
     hashed_password: str = password_hash.hash(registry_form.password)
@@ -30,7 +32,7 @@ def register(registry_form: UserRegistryForm, session: SessionDep):
         username=registry_form.username,
         email=registry_form.email,
         hashed_password=hashed_password,
-        role="user"
+        role="user",
     )
     session.add(user)
     session.commit()
@@ -52,4 +54,12 @@ def login(session: SessionDep, login_form: OAuth2PasswordRequestForm = Depends()
             detail="Username or password is invalid",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return {"access_token": create_access_token(user.id, user.role), "token_type": "Bearer"}
+    return {
+        "access_token": create_access_token(user.id, user.role),
+        "token_type": "Bearer",
+    }
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(token: str = Depends(oauth2_schema)):
+    revoked_token.add(token)
+    return {"message": "Logged out successfully!"}

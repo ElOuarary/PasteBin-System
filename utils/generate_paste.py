@@ -5,7 +5,7 @@ import string
 def generate_tag(length: int = 6) -> str:
     if length < 1:
         raise ValueError("length must be >= 1")
-    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+    return "".join(random.choices(string.ascii_lowercase + string.digits, k=length))
 
 
 def generate_tags(count: int = 2, length: int = 6) -> list[str]:
@@ -23,7 +23,9 @@ def generate_test_paste(
     if content_length == 0:
         content = ""
     else:
-        content = ''.join(random.choices(string.ascii_letters + string.digits + " ", k=content_length))
+        content = "".join(
+            random.choices(string.ascii_letters + string.digits + " ", k=content_length)
+        )
     return {
         "content": content.strip(),
         "is_private": is_private,

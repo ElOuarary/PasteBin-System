@@ -21,6 +21,8 @@ ALGORITHM = os.environ.get("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES")
 
 oauth2_schema = OAuth2PasswordBearer("auth/login")
+revoked_token: set[str] = set()
+
 
 class Token(BaseModel):
     access_token: str
@@ -48,6 +50,12 @@ def get_payload(token: str = Depends(oauth2_schema)) -> dict:
             detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if payload["jti"] in revoked_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return payload
 
 
@@ -65,11 +73,17 @@ def get_user(session: SessionDep, payload: dict = Depends(get_payload)) -> User:
         )
     return user
 
+
 def role_required(required_roles: list[Role]):
     def wrapper(user: User = Depends(get_user)):
         if user.role not in required_roles:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"error": f"Access denied for role {user.role}"})
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"error": f"Access denied for role {user.role}"},
+            )
         return user
+
     return wrapper
+
 
 CurrentUser = Annotated[User, Depends(get_user)]

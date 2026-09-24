@@ -6,8 +6,6 @@ from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 
-from src.models import Paste, PasteTagLink, Tag, User
-
 load_dotenv()
 DATABASE_URL = os.environ["DATABASE_URL"]
 
