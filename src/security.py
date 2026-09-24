@@ -21,6 +21,7 @@ ALGORITHM = os.environ.get("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES = os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES")
 
 oauth2_schema = OAuth2PasswordBearer("auth/login")
+revoked_token: set[str] = set()
 
 
 class Token(BaseModel):
@@ -44,6 +45,12 @@ def get_payload(token: str = Depends(oauth2_schema)) -> dict:
     try:
         payload = jwt.decode(token, key=SECRET_KEY, algorithms=[ALGORITHM])
     except InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if payload["jti"] in revoked_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",

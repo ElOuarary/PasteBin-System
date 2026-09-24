@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from main import app
+from utils.generate_paste import generate_test_paste
 from utils.generate_user import generate_test_user
 
 
@@ -34,3 +35,7 @@ def auth_headers(token):
 @pytest.fixture
 def headers(json_headers, auth_headers):
     return json_headers | auth_headers
+
+@pytest.fixture
+def paste():
+    return generate_test_paste()

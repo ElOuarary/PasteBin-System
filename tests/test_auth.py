@@ -66,6 +66,7 @@ def test_login_with_wrong_credentials(client, field):
     assert response.status_code == 401
 
     headers = response.headers
-    assert response.json() == {"detail": "Username or password is invalid"}
+    data = response.json()
+    assert data == {"detail": "Username or password is invalid"}
     assert "www-authenticate" in headers
     assert headers["www-authenticate"] == "Bearer"

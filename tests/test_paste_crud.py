@@ -3,9 +3,7 @@ import pytest
 from utils.generate_paste import generate_tags, generate_test_paste
 
 
-def test_create(client, headers):
-    paste = generate_test_paste()
-
+def test_create(client, headers, paste):
     response = client.post("/paste", json=paste, headers=headers)
     assert response.status_code == 201
     data = response.json()
@@ -26,35 +24,36 @@ def test_create_wrong_body_content(client, headers):
     response = client.post("/paste", json=paste, headers=headers)
     assert response.status_code == 422
     assert "detail" in response.json()
+    
+
+def test_create_missing_body(client, headers):
     response = client.post("/paste", json={}, headers=headers)
     assert response.status_code == 422
     assert "detail" in response.json()
-
 
 def test_create_wrong_content_type(client, headers):
     paste = generate_test_paste()
     headers = headers | {"Content-Type": "text/html"}
 
     response = client.post("/paste", json=paste, headers=headers)
+    data = response.json()
     assert response.status_code == 422
-    assert response.json() == {
+    assert data == {
         "detail": "application/json is the only supported value for the Content-Type"
     }
 
 
-def test_create_wrong_accept(client, headers):
-    paste = generate_test_paste()
+def test_create_wrong_accept(client, headers, paste):
     headers = headers | {"Accept": "text/html"}
     response = client.post("/paste", json=paste, headers=headers)
+    data = response.json()
     assert response.status_code == 400
-    assert response.json() == {
+    assert data == {
         "detail": "application/json is only supported value for the Accept"
     }
 
 
-def test_read(client, headers):
-    paste = generate_test_paste()
-
+def test_read(client, headers, paste):
     response = client.post("/paste", json=paste, headers=headers)
     assert response.status_code == 201
 
@@ -78,16 +77,15 @@ def test_read(client, headers):
     assert response.json()[0]["view_count"] == 2
 
 
-def test_read_non_existent_paste(client, headers):
+def test_read_nonexistent_paste(client, headers):
     paste_id = 999_999
     response = client.get(f"/paste/{paste_id}", headers=headers)
+    data = response.json()
     assert response.status_code == 404
-    assert response.json() == {"detail": "not found"}
+    assert data == {"detail": "not found"}
 
 
-def test_read_wrong_accept(client, headers):
-    paste = generate_test_paste()
-
+def test_read_wrong_accept(client, headers, paste):
     response = client.post("/paste", json=paste, headers=headers)
     assert response.status_code == 201
 
@@ -121,17 +119,17 @@ def test_read_tags_filtered(client, headers):
         assert paste["view_count"] == 0
 
 
-def test_read_non_existant_tags(client, headers):
+def test_read_nonexistent_tag(client, headers):
     random_tag = generate_tags(count=1)
 
     response = client.get("/paste", params={"tag": random_tag}, headers=headers)
+    data = response.json()
     assert response.status_code == 404
-    assert response.json() == {"detail": "not found"}
+    assert data == {"detail": "not found"}
 
 
 @pytest.mark.parametrize("tags", ["normal", "empty", "null"])
-def test_update(client, headers, tags):
-    paste = generate_test_paste()
+def test_update(client, headers, tags, paste):
     response = client.post("/paste", json=paste, headers=headers)
     assert response.status_code == 201
     paste_id = response.json()["id"]
@@ -172,9 +170,7 @@ def test_update(client, headers, tags):
         assert old_tags == data["tags"]
 
 
-def test_delete(client, headers):
-    paste = generate_test_paste()
-
+def test_delete(client, headers, paste):
     response = client.post("/paste", json=paste, headers=headers)
     assert response.status_code == 201
 

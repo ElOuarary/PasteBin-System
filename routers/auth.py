@@ -6,7 +6,7 @@ from sqlmodel import select
 from src.config.database import SessionDep
 from src.models import User
 from src.schemas.user import UserRegistryForm
-from src.security import Token, create_access_token
+from src.security import Token, create_access_token, oauth2_schema, revoked_token
 
 password_hash = PasswordHash.recommended()
 
@@ -58,3 +58,8 @@ def login(session: SessionDep, login_form: OAuth2PasswordRequestForm = Depends()
         "access_token": create_access_token(user.id, user.role),
         "token_type": "Bearer",
     }
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(token: str = Depends(oauth2_schema)):
+    revoked_token.add(token)
+    return {"message": "Logged out successfully!"}
