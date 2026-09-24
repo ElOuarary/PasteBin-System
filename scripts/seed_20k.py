@@ -13,7 +13,7 @@ import argparse
 import os
 import random
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-import psycopg2  # noqa: E402
+import psycopg2
 
 KEYWORD = "perfprobe"
 TAG_NAMES = ["python", "perf", "notes", "snippet", "q5", "draft", "log", "seed"]
@@ -72,7 +72,7 @@ def main() -> None:
     )
 
     rng = random.Random(42)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     conn = psycopg2.connect(dsn)
     conn.autocommit = False
     cur = conn.cursor()

@@ -6,7 +6,7 @@ ALLOWED_CHARS = string.ascii_letters + string.digits + SPECIAL_CHARS
 
 
 def generate_username(length: int = 10) -> str:
-    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+    return "".join(random.choices(string.ascii_lowercase + string.digits, k=length))
 
 
 def generate_email(username: str | None = None) -> str:
@@ -27,7 +27,7 @@ def generate_password(length: int = 12) -> str:
     filler = [random.choice(ALLOWED_CHARS) for _ in range(length - 4)]
     chars = required + filler
     random.shuffle(chars)
-    return ''.join(chars)
+    return "".join(chars)
 
 
 def generate_test_user() -> dict:

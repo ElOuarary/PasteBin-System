@@ -9,9 +9,7 @@ def content_type_validation(
     if content_type.lower() != "application/json":
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=
-                "application/json is the only supported value for the Content-Type"
-            ,
+            detail="application/json is the only supported value for the Content-Type",
         )
 
 

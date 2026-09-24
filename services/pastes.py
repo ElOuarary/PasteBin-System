@@ -70,9 +70,7 @@ def _validate_paste_list(
     if pastes is None or len(pastes) == 0:
         if search:
             return []
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
     elif (
         len(pastes) == 1
         and pastes[0].expires_at is not None
@@ -205,9 +203,7 @@ def delete_expired(session: Session) -> None:
 
 def validate_paste(paste_db: Paste, user: User):
     if paste_db is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
     elif paste_db.expires_at is not None and _is_expired(paste_db.expires_at):
         raise HTTPException(
             status_code=status.HTTP_410_GONE,

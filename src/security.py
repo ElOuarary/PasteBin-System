@@ -22,6 +22,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES")
 
 oauth2_schema = OAuth2PasswordBearer("auth/login")
 
+
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -65,11 +66,17 @@ def get_user(session: SessionDep, payload: dict = Depends(get_payload)) -> User:
         )
     return user
 
+
 def role_required(required_roles: list[Role]):
     def wrapper(user: User = Depends(get_user)):
         if user.role not in required_roles:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"error": f"Access denied for role {user.role}"})
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"error": f"Access denied for role {user.role}"},
+            )
         return user
+
     return wrapper
+
 
 CurrentUser = Annotated[User, Depends(get_user)]

@@ -1,4 +1,5 @@
 from fastapi import FastAPI, status
+
 from routers import auth, paste, pastes
 
 app = FastAPI()

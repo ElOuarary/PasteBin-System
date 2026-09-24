@@ -4,8 +4,8 @@ from dependencies import accept_validation
 from services.pastes import delete_expired, search_pastes
 from src.config.database import SessionDep
 from src.models import User
-from src.security import role_required
 from src.schemas.paste import PasteRead
+from src.security import role_required
 
 router = APIRouter(prefix="/pastes", tags=["pastes"])
 
@@ -27,5 +27,7 @@ def search_bin(
 
 
 @router.delete("/expired", status_code=status.HTTP_204_NO_CONTENT)
-def delete_expired_bin(session: SessionDep, user: User = Depends(role_required(["admin"]))):
+def delete_expired_bin(
+    session: SessionDep, user: User = Depends(role_required(["admin"]))
+):
     delete_expired(session)
